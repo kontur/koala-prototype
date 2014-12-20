@@ -5,3 +5,5 @@ test_settings.py
 session/*
 venv/*
 .idea
+components/bower
+node_modules/
