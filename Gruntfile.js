@@ -16,18 +16,29 @@ module.exports = function (grunt) {
                 banner: '<%= banner %>',
                 stripBanners: true
             },
-            dist: {
+            app: {
                 src: ['components/js/app.js'],
                 dest: 'static/js/app.js'
+            },
+            libs: {
+                src: [
+                    'components/bower/angular/angular.js',
+                    'components/bower/angular-resource/angular-resource.js'
+                ],
+                dest: 'static/js/libs.js'
             }
         },
         uglify: {
             options: {
                 banner: '<%= banner %>'
             },
-            dist: {
-                src: '<%= concat.dist.dest %>',
-                dest: 'components/js/app.min.js'
+            app: {
+                src: '<%= concat.app.dest %>',
+                dest: 'static/js/app.min.js'
+            },
+            libs: {
+                src: '<%= concat.libs.dest %>',
+                dest: 'static/js/libs.min.js'
             }
         },
         jshint: {
@@ -48,12 +59,25 @@ module.exports = function (grunt) {
             },
             gruntfile: {
                 src: 'Gruntfile.js'
+            },
+            app: {
+                options: {
+                    unused: false,
+                    globals: {
+                        "angular": true
+                    }
+                },
+                src: 'components/js/*.js'
             }
         },
         watch: {
             gruntfile: {
                 files: '<%= jshint.gruntfile.src %>',
                 tasks: ['jshint:gruntfile']
+            },
+            app_js: {
+                files: 'components/js/*.js',
+                tasks: ['jshint:app', 'concat:app', 'uglify:app']
             }
         }
     });
@@ -65,6 +89,7 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-watch');
 
     // Default task.
-    grunt.registerTask('default', ['jshint', 'concat', 'uglify']);
+    grunt.registerTask('default', ['jshint', 'concat:app', 'uglify:app']);
+    grunt.registerTask('libs', ['concat:libs', 'uglify:libs']);
 
 };

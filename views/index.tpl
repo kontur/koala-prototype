@@ -34,7 +34,7 @@ app
 </ul>
 <img src="/static/img/yeoman.png">
 
+<script src="/static/js/libs.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>
-
