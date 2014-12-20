@@ -17,12 +17,13 @@ module.exports = function (grunt) {
                 stripBanners: true
             },
             app: {
-                src: ['components/js/app.js'],
+                src: ['components/js/*.js'],
                 dest: 'static/js/app.js'
             },
             libs: {
                 src: [
                     'components/bower/angular/angular.js',
+                    'components/bower/angular-route/angular-route.js',
                     'components/bower/angular-resource/angular-resource.js'
                 ],
                 dest: 'static/js/libs.js'

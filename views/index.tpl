@@ -1,4 +1,4 @@
-<html ng-app="koala">
+<html ng-app="Koala">
 <head>
 
 </head>
