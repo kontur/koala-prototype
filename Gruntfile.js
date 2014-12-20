@@ -24,7 +24,8 @@ module.exports = function (grunt) {
                 src: [
                     'components/bower/angular/angular.js',
                     'components/bower/angular-route/angular-route.js',
-                    'components/bower/angular-resource/angular-resource.js'
+                    'components/bower/angular-resource/angular-resource.js',
+                    'components/bower/angularjs-geolocation/src/geolocation.js'
                 ],
                 dest: 'static/js/libs.js'
             }
@@ -65,7 +66,8 @@ module.exports = function (grunt) {
                 options: {
                     unused: false,
                     globals: {
-                        "angular": true
+                        "angular": true,
+                        "console": true
                     }
                 },
                 src: 'components/js/*.js'

@@ -1,6 +1,7 @@
 import bottle
 import beaker.middleware
 import json
+import jsonpickle
 from bottle import route, redirect, post, run, request, hook, template, static_file
 from instagram import client, subscriptions
 
@@ -227,22 +228,49 @@ def user_follows():
         print(e)              
     return "%s %s <br/>Remaining API Calls = %s/%s" % (get_nav(),content,api.x_ratelimit_remaining,api.x_ratelimit)
 
-@route('/location_search')
-def location_search(): 
+
+
+@route('/location_search/<lat>/<lng>')
+def location_search(lat, lng):
     access_token = request.session['access_token']
     if not access_token:
         return 'Missing Access Token'
     try:
         api = client.InstagramAPI(access_token=access_token)
-        location_search = api.location_search(lat="37.7808851",lng="-122.3948632",distance=1000)
-        print location_search
+        location_search = api.location_search(lat=lat,lng=lng,distance=5000)
+        # print location_search
         locations = []
         for location in location_search:
-            dict = { location.id: [ { 'name': location.name }, { 'lat': location.point.latitude }, { 'lng': location.point.longitude } ] }
+            dict = { 'id': location.id, 'name': location.name, 'lat': location.point.latitude, 'lng': location.point.longitude }
             locations.append(dict)
     except Exception as e:
         print(e)
-    return json.dumps([{ 'locations': locations}, {'limit_remaining': api.x_ratelimit_remaining }])
+    # return json.dumps([{ 'locations': locations}, {'limit_remaining': api.x_ratelimit_remaining }])
+    print locations
+    return json.dumps(locations)
+
+
+@route('/location_media/<id>')
+def location_media(id):
+    access_token = request.session['access_token']
+    collection = []
+    if not access_token:
+        return 'Missing Access Token'
+    try:
+        api = client.InstagramAPI(access_token=access_token)
+        media = api.location_recent_media(location_id=id)
+        for lst in media:
+            for medium in lst:
+                dict = { 'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
+                         'comments': medium.comment_count }
+                collection.append(dict)
+
+        # print media
+    except Exception as e:
+        print(e)
+    # return jsonpickle.encode(media)
+    return json.dumps(collection)
+
 
 @route('/tag_search')
 def tag_search(): 

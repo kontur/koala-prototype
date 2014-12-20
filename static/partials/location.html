@@ -1,0 +1,9 @@
+hello location.html
+
+<div ng-if="media">
+    <p ng-repeat="m in media">
+        {{ m }}
+    <img ng-src="{{ m.image }}">
+    </p>
+</div>
+<div ng-if="!media">no media</div>
