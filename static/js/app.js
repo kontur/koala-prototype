@@ -1,4 +1,4 @@
-/*!  - v0.0.0 - 2014-12-20
+/*!  - v0.0.0 - 2014-12-21
 * https://github.com/kontur/koala-prototype
 * Copyright (c) 2014 ; Licensed  */
 
@@ -18,10 +18,10 @@ angular.module('Koala.controllers', ['geolocation'])
             console.log($scope.locations);
         });
     }])
-    .controller('SearchController', ['$scope', '$route', 'Places', function ($scope, $route, Places) {
+    .controller('SearchController', ['$scope', '$route', 'PlaceSearch', function ($scope, $route, PlaceSearch) {
         console.log("hello search controller");
-        $scope.term =  $route.current.params.term;
-        console.log(Places.get());
+        console.log("term", $route.current.params.term);
+        console.log(PlaceSearch.search($route.current.params.term));
     }])
     .controller('LocationController', ['$scope', '$route', 'PlaceMedia', function ($scope, $route, PlaceMedia) {
         console.log("hello location controller", $route.current.params.id );
@@ -45,6 +45,14 @@ angular.module('Koala', [
 angular.module('Koala.services', ['ngResource'])
     .factory('Places', ['$resource', function ($resource) {
         return $resource('/location_search/:lat/:lng', {}, {
+            'search': {
+                method: 'GET',
+                isArray: true
+            }
+        });
+    }])
+    .factory('PlaceSearch', ['$resource', function ($resource) {
+        return $resource('/location/name/:name', {}, {
             'search': {
                 method: 'GET',
                 isArray: true

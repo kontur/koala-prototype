@@ -4,7 +4,7 @@
 </head>
 <body>
 
-app
+<a href="#/">Home</a>
 <div ng-view>
    view
 </div>

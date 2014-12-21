@@ -15,10 +15,10 @@ angular.module('Koala.controllers', ['geolocation'])
             console.log($scope.locations);
         });
     }])
-    .controller('SearchController', ['$scope', '$route', 'Places', function ($scope, $route, Places) {
+    .controller('SearchController', ['$scope', '$route', 'PlaceSearch', function ($scope, $route, PlaceSearch) {
         console.log("hello search controller");
-        $scope.term =  $route.current.params.term;
-        console.log(Places.get());
+        console.log("term", $route.current.params.term);
+        console.log(PlaceSearch.search($route.current.params.term));
     }])
     .controller('LocationController', ['$scope', '$route', 'PlaceMedia', function ($scope, $route, PlaceMedia) {
         console.log("hello location controller", $route.current.params.id );
