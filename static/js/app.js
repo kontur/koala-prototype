@@ -68,4 +68,13 @@ angular.module('Koala.services', ['ngResource'])
         });
     }])
 
+    .factory('Venues', ['$resource', function ($resource) {
+        return $resource('/api/venues/:lat/:lng/:category', {}, {
+            'get': {
+                method: 'GET',
+                isArray: true
+            }
+        });
+    }])
+
 ;
