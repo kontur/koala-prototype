@@ -45,6 +45,11 @@ unauthenticated_api = client.InstagramAPI(**CONFIG)
 def setup_request():
     request.session = request.environ['beaker.session']
 
+def join_all_categories():
+    str = ""
+    for key, value in CATEGORIES.iteritems():
+        str += ''.join(value) + ','
+    return str
 
 #########
 # HELPERS
@@ -58,6 +63,11 @@ def venues_search_place(place, category):
     if category:
         if category in CATEGORIES.keys():
             params['categoryId'] = ''.join(CATEGORIES[category])
+        else:
+            raise ValueError('Provided category not found', category)
+    else:
+        params['categoryId'] = join_all_categories()
+
     results = fs.venues.search(params=params)
     return results
 
@@ -67,6 +77,10 @@ def venues_search_geolocation(lat, lng, category=None):
     if category:
         if category in CATEGORIES.keys():
             params['categoryId'] = ''.join(CATEGORIES[category])
+        else:
+            raise ValueError('Provided category not found', category)
+    else:
+        params['categoryId'] = join_all_categories()
     results = fs.venues.search(params=params)
     return results
 
@@ -102,8 +116,9 @@ def find_venues(term, category=None):
     venues = venues_search_place(term, category)
     venues_in_category = []
     i = f = 0
+    max = min(3, len(venues['venues']) - 1)
     if venues:
-        while (f < 3):
+        while (f < max):
             collection = venues_images(venues['venues'][i]['id'])
             if len(collection) > 0:
                 f = f + 1
@@ -120,8 +135,9 @@ def get_venues(lat, lng, category=None):
     venues = venues_search_geolocation(lat, lng, category)
     venues_in_category = []
     i = f = 0
+    max = min(3, len(venues['venues']) - 1)
     if venues:
-        while (f < 3):
+        while (f < max):
             collection = venues_images(venues['venues'][i]['id'])
             if len(collection) > 0:
                 f = f + 1

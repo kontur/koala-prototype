@@ -2,7 +2,8 @@
 angular.module('Koala', [
     'ngRoute',
     'Koala.controllers',
-    'Koala.services'
+    'Koala.services',
+    'Koala.directives'
     ])
     .config(['$routeProvider', function ($routeProvider) {
         $routeProvider.when('/home', { templateUrl: 'static/partials/home.html', controller: 'HomeController' });

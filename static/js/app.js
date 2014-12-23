@@ -46,11 +46,26 @@ angular.module('Koala.controllers', ['geolocation'])
         }])
 
 ;
+angular.module('Koala.directives', []).directive('ngEnter', function () {
+    return function (scope, element, attrs) {
+        element.bind("keydown keypress", function (event) {
+            console.log(event);
+            if (event.which === 13) {
+                scope.$apply(function () {
+                    scope.$eval(attrs.ngEnter);
+                });
+
+                event.preventDefault();
+            }
+        });
+    };
+});
 
 angular.module('Koala', [
     'ngRoute',
     'Koala.controllers',
-    'Koala.services'
+    'Koala.services',
+    'Koala.directives'
     ])
     .config(['$routeProvider', function ($routeProvider) {
         $routeProvider.when('/home', { templateUrl: 'static/partials/home.html', controller: 'HomeController' });
