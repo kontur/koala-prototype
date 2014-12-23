@@ -25,6 +25,15 @@ CONFIG = {
 FOURSQURE_CLIENT_ID = 'CA1FI3A2KJ3ZDRIUF5DJUZIXXES24XFVICYON34GBBOKBXSB'
 FOURSQURE_CLIENT_SECRET = 'FRHDILCEV0Y0E1WR3VWPWT03X0N01AKZU5SJVHK4M0NE2HF0'
 
+
+CATEGORY_NIGHTLIVE = 'nightlive'
+CATEGORY_FOOD = 'food'
+
+CATEGORIES = {
+    CATEGORY_NIGHTLIVE: ['4d4b7105d754a06376d81259'],
+    CATEGORY_FOOD: ['4d4b7105d754a06374d81259']
+}
+
 unauthenticated_api = client.InstagramAPI(**CONFIG)
 
 
@@ -43,14 +52,22 @@ def setup_request():
 def get_page():
     return template('index')
 
-def venues_search_place(place):
+def venues_search_place(place, category):
     fs = foursquare.Foursquare(client_id=FOURSQURE_CLIENT_ID, client_secret=FOURSQURE_CLIENT_SECRET)
-    results = fs.venues.search(params={'near': place})
+    params = {'near': place}
+    if category:
+        if category in CATEGORIES.keys():
+            params['categoryId'] = ''.join(CATEGORIES[category])
+    results = fs.venues.search(params=params)
     return results
 
 def venues_search_geolocation(lat, lng, category=None):
     fs = foursquare.Foursquare(client_id=FOURSQURE_CLIENT_ID, client_secret=FOURSQURE_CLIENT_SECRET)
-    results = fs.venues.search(params={'ll': lat + ',' + lng})
+    params = {'ll': lat + ',' + lng}
+    if category:
+        if category in CATEGORIES.keys():
+            params['categoryId'] = ''.join(CATEGORIES[category])
+    results = fs.venues.search(params=params)
     return results
 
 def venues_images(foursquare_venue_id):
@@ -82,7 +99,7 @@ def venues_images(foursquare_venue_id):
 @route('/api/venues/search/<term>/<category>')
 def find_venues(term, category=None):
     print "term:", term, "category:", category
-    venues = venues_search_place(term)
+    venues = venues_search_place(term, category)
     venues_in_category = []
     i = f = 0
     if venues:
