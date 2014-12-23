@@ -6,22 +6,22 @@ angular.module('Koala.controllers', ['geolocation'])
             $location.path(path + "/" + $scope.term);
         };
     }])
-    .controller('NearbyController', ['$scope', '$route', 'geolocation', 'Places', function ($scope, $route, geolocation, Places) {
-        console.log("hello nearby controller");
+
+    .controller('HereController', ['$scope', '$route', 'geolocation', 'Venues', function ($scope, $route, geolocation, Venues) {
+        console.log("HereController");
         geolocation.getLocation().then(function(data){
             $scope.coords = {lat: data.coords.latitude, lng: data.coords.longitude};
-            console.log(data.coords);
-            $scope.locations = Places.search({ lat: data.coords.latitude, lng: data.coords.longitude });
-            console.log($scope.locations);
+            $scope.locations = Venues.show({ v1: data.coords.latitude, v2: data.coords.longitude });
         });
     }])
-    .controller('SearchController', ['$scope', '$route', 'PlaceSearch', function ($scope, $route, PlaceSearch) {
-        console.log("hello search controller");
-        console.log("term", $route.current.params.term);
-        console.log(PlaceSearch.search($route.current.params.term));
+
+    .controller('SearchController', ['$scope', '$route', 'Venues', function ($scope, $route, Venues) {
+        console.log("SearchController");
+        $scope.locations = Venues.search({ v1: $route.current.params.term });
     }])
+
     .controller('LocationController', ['$scope', '$route', 'PlaceMedia', function ($scope, $route, PlaceMedia) {
-        console.log("hello location controller", $route.current.params.id );
+        console.log("LocationController", $route.current.params.id );
         $scope.media = PlaceMedia.images({ id: $route.current.params.id });
     }])
 

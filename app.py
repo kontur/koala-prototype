@@ -40,108 +40,74 @@ def setup_request():
 #########
 # HELPERS
 #########
+def get_page():
+    return template('index')
 
-def search_location(place):
+def venues_search_place(place):
     fs = foursquare.Foursquare(client_id=FOURSQURE_CLIENT_ID, client_secret=FOURSQURE_CLIENT_SECRET)
     results = fs.venues.search(params={'near': place})
     return results
 
-
-def get_page():
-    return template('index')
-
-
-def venues_search(lat, lng, category=None):
+def venues_search_geolocation(lat, lng, category=None):
     fs = foursquare.Foursquare(client_id=FOURSQURE_CLIENT_ID, client_secret=FOURSQURE_CLIENT_SECRET)
     results = fs.venues.search(params={'ll': lat + ',' + lng})
     return results
 
-########
-# ROUTES
-########
+def venues_images(foursquare_venue_id):
+    access_token = request.session['access_token']
+    collection = []
+    if not access_token:
+        return 'Missing Access Token'
+    try:
+        api = client.InstagramAPI(access_token=access_token)
+        location = api.location_search(foursquare_v2_id=foursquare_venue_id)
+        media = api.location_recent_media(location_id=location[0].id)
 
-# json api resources
-#
-# /geolocation
-#     > here (default) or any lat lng location
-#     > geolocation based foursquare lookup
-#     > show x different places / category from instagram
-#
-# /geolocation/*category*
-#     > show 1 image / page
-#
-# /geolocation/*category*/*venue*
-#     > 3 different view types for viewing x photos at venue
-#
-# ~~~
-# /location/*placename*
-#     > term based foursquare lookup
-#     > show x different places / category from instagram
-#
-# /location/*placename*/*category*
+        for lst in media:
+            for medium in lst:
+                dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
+                        'comments': medium.comment_count}
+                collection.append(dict)
+    except Exception as e:
+        print(e)
+
+    return collection
 
 
 ############
 # API ROUTES
 ############
 
-# @route('/api/venues/<lat>/<lng>')
-# def get_venues(lat, lng):
-#     return True
-
-@route('/api/venues/<lat>/<lng>', defaults={'category': None})
-@route('/api/venues/<lat>/<lng>/<category>')
-def get_venues(lat, lng, category=None):
-    print lat
-    print lng
-    print category
-    #
-    # if category:
-    #     True
-    # else:
-    #     False
-
-    venues = venues_search(lat, lng, category)
-
-    v = []
+@route('/api/venues/search/<term>', defaults={'category': None})
+@route('/api/venues/search/<term>/<category>')
+def find_venues(term, category=None):
+    print "term:", term, "category:", category
+    venues = venues_search_place(term)
+    venues_in_category = []
     if venues:
         for x in range(0, 3):
+            collection = venues_images(venues['venues'][x]['id'])
+            if len(collection) > 0:
+                venues['venues'][x]['instagram'] = collection[0]
+            venues_in_category.append(venues['venues'][x])
+    # print v
+    return json.dumps(venues_in_category)
 
-            # for key, value in venues['venues'][x].iteritems():
-            #     print key, value
 
-            print "---"
-            print "ID", venues['venues'][x]['id']
-
-            access_token = request.session['access_token']
-            collection = []
-            if not access_token:
-                return 'Missing Access Token'
-            try:
-                api = client.InstagramAPI(access_token=access_token)
-
-                location = api.location_search(foursquare_v2_id=venues['venues'][x]['id'])
-                print "loc", location[0].id
-
-                media = api.location_recent_media(location_id=location[0].id)
-                print "media", media[0]
-
-                for lst in media:
-                    for medium in lst:
-                        dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
-                                'comments': medium.comment_count}
-                        collection.append(dict)
-
-                        # print media
-            except Exception as e:
-                print(e)
-
-            print "collection", collection
-
-            venues['venues'][x]['instagram'] = collection[0]
-            v.append(venues['venues'][x])
-
-    return json.dumps(v)
+@route('/api/venues/show/<lat>/<lng>', defaults={'category': None})
+@route('/api/venues/show/<lat>/<lng>/<category>')
+def get_venues(lat, lng, category=None):
+    print "lat:", lat, "lng:", lng, "category:", category
+    venues = venues_search_geolocation(lat, lng, category)
+    venues_in_category = []
+    if venues:
+        for x in range(0, 3):
+            collection = venues_images(venues['venues'][x]['id'])
+            if len(collection) > 0:
+                venues['venues'][x]['instagram'] = collection[0]
+            venues_in_category.append(venues['venues'][x])
+    # print v
+    return json.dumps(venues_in_category)
 
 
 @route('/api/venue/<id>')
@@ -222,51 +188,6 @@ def media_search():
     return "%s %s <br/>Remaining API Calls = %s/%s" % (get_page(), content, api.x_ratelimit_remaining, api.x_ratelimit)
 
 
-@route('/location/name/<name>')
-def location_by_name(name):
-    locations = search_location(name)
-
-    # print locations.items
-    # print type(locations)
-
-    for key in locations:
-        # print "key %s, value %s" % (key, locations[key])
-        print "key %s" % (key)
-
-    p = []
-    for place in locations['venues']:
-        # if place.id:
-        dict = {"id": place["id"]}
-        p.append(dict)
-        for key in place:
-            print "key %s" % (key)
-
-    print p
-    # return json.dumps(locations['venues'])
-    return json.dumps(p)
-
-
-@route('/location_search/<lat>/<lng>')
-def location_search(lat, lng):
-    access_token = request.session['access_token']
-    if not access_token:
-        return 'Missing Access Token'
-    try:
-        api = client.InstagramAPI(access_token=access_token)
-        location_search = api.location_search(lat=lat, lng=lng, distance=5000)
-        # print location_search
-        locations = []
-        for location in location_search:
-            dict = {'id': location.id, 'name': location.name, 'lat': location.point.latitude,
-                    'lng': location.point.longitude}
-            locations.append(dict)
-    except Exception as e:
-        print(e)
-    # return json.dumps([{ 'locations': locations}, {'limit_remaining': api.x_ratelimit_remaining }])
-    print locations
-    return json.dumps(locations)
-
-
 @route('/location_media/<id>')
 def location_media(id):
     access_token = request.session['access_token']
@@ -275,7 +196,10 @@ def location_media(id):
         return 'Missing Access Token'
     try:
         api = client.InstagramAPI(access_token=access_token)
-        media = api.location_recent_media(location_id=id)
+        # get instagram location id for this foursquare location id
+        instagram_location_id = api.location_search(foursquare_v2_id=id)
+        media = api.location_recent_media(location_id=instagram_location_id[0].id)
+        print "media", media
         for lst in media:
             for medium in lst:
                 dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
@@ -286,6 +210,8 @@ def location_media(id):
     except Exception as e:
         print(e)
     # return jsonpickle.encode(media)
+
+    print "Collection", collection
     return json.dumps(collection)
 
 
