@@ -1,10 +1,9 @@
 import bottle
 import beaker.middleware
 import json
-import jsonpickle
 import foursquare
 from bottle import route, redirect, post, run, request, hook, template, static_file
-from instagram import client, subscriptions
+from instagram import client
 
 bottle.debug(True)
 
@@ -26,12 +25,16 @@ FOURSQURE_CLIENT_ID = 'CA1FI3A2KJ3ZDRIUF5DJUZIXXES24XFVICYON34GBBOKBXSB'
 FOURSQURE_CLIENT_SECRET = 'FRHDILCEV0Y0E1WR3VWPWT03X0N01AKZU5SJVHK4M0NE2HF0'
 
 
-CATEGORY_NIGHTLIVE = 'nightlive'
+CATEGORY_NIGHTLIFE = 'nightlife'
 CATEGORY_FOOD = 'food'
+CATEGORY_CAFE = 'cafes'
+CATEGORY_HOTEL = 'hotels'
 
 CATEGORIES = {
-    CATEGORY_NIGHTLIVE: ['4d4b7105d754a06376d81259'],
-    CATEGORY_FOOD: ['4d4b7105d754a06374d81259']
+    CATEGORY_NIGHTLIFE: ['4d4b7105d754a06376d81259'],
+    CATEGORY_FOOD: ['4d4b7105d754a06374d81259'],
+    CATEGORY_CAFE: ['4bf58dd8d48988d16d941735'],
+    CATEGORY_HOTEL: ['4bf58dd8d48988d1fa931735']
 }
 
 unauthenticated_api = client.InstagramAPI(**CONFIG)
@@ -123,6 +126,7 @@ def find_venues(term, category=None):
             if len(collection) > 0:
                 f = f + 1
                 venues['venues'][i]['instagram'] = collection[0]
+                venues['venues'][i]['instagram_stats'] = { 'num_photos': len(collection) }
             venues_in_category.append(venues['venues'][i])
             i = i + 1
     return json.dumps(venues_in_category)
@@ -142,6 +146,7 @@ def get_venues(lat, lng, category=None):
             if len(collection) > 0:
                 f = f + 1
                 venues['venues'][i]['instagram'] = collection[0]
+                venues['venues'][i]['instagram_stats'] = { 'num_photos': len(collection) }
             venues_in_category.append(venues['venues'][i])
             i = i + 1
     return json.dumps(venues_in_category)

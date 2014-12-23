@@ -1,8 +1,11 @@
 template: category.html
 
+<loading></loading>
+
 <p ng-repeat="location in places">
     <a href="#/location/{{ location.id }}">
         <span>{{ location.name }}</span>
         <img ng-if="location.instagram.image" ng-src="{{ location.instagram.image }}">
     </a>
+    (some instagram location stats {{ location.instagram_stats }})
 </p>

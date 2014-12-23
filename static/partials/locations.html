@@ -1,13 +1,18 @@
 template: locations.html
 
-        #/{{ uriPart }}/food
-        <ul>
-            <li><a href="#/{{ uriPart }}/explore/food">food</a></li>
-        </ul>
+<ul>
+    <li><a href="#/{{ uriPart }}/explore/food">food</a></li>
+    <li><a href="#/{{ uriPart }}/explore/nightlife">nightlife</a></li>
+    <li><a href="#/{{ uriPart }}/explore/cafes">cafes</a></li>
+    <li><a href="#/{{ uriPart }}/explore/hotels">hotels</a></li>
+</ul>
+
+<loading></loading>
 
 <p ng-repeat="location in locations">
     <a href="#/location/{{ location.id }}">
         <span>{{ location.name }}</span>
         <img ng-if="location.instagram.image" ng-src="{{ location.instagram.image }}">
     </a>
+    (some instagram location stats {{ location.instagram_stats }})
 </p>

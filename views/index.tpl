@@ -4,7 +4,7 @@
 </head>
 <body>
 
-<a href="#/">Home</a>
+<a href="#/"><img src="/static/img/koala.png" style="width: 200px;"></a>
 <div ng-view>
    view
 </div>
