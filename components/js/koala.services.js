@@ -15,8 +15,8 @@ angular.module('Koala.services', ['ngResource'])
             }
         });
     }])
-    .factory('PlaceMedia', ['$resource', function ($resource) {
-        return $resource('/location_media/:id', {}, {
+    .factory('Venue', ['$resource', function ($resource) {
+        return $resource('/api/venue/:id', {}, {
             'images': {
                 method: 'GET',
                 isArray: true

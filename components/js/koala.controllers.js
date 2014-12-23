@@ -20,9 +20,9 @@ angular.module('Koala.controllers', ['geolocation'])
         $scope.locations = Venues.search({ v1: $route.current.params.term });
     }])
 
-    .controller('LocationController', ['$scope', '$route', 'PlaceMedia', function ($scope, $route, PlaceMedia) {
+    .controller('LocationController', ['$scope', '$route', 'Venue', function ($scope, $route, Venue) {
         console.log("LocationController", $route.current.params.id );
-        $scope.media = PlaceMedia.images({ id: $route.current.params.id });
+        $scope.media = Venue.images({ id: $route.current.params.id });
     }])
 
 ;

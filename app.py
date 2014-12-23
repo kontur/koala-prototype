@@ -111,9 +111,30 @@ def get_venues(lat, lng, category=None):
 
 
 @route('/api/venue/<id>')
-def get_venue(id):
-    return True
+def location_media(id):
+    access_token = request.session['access_token']
+    collection = []
+    if not access_token:
+        return 'Missing Access Token'
+    try:
+        api = client.InstagramAPI(access_token=access_token)
+        # get instagram location id for this foursquare location id
+        instagram_location_id = api.location_search(foursquare_v2_id=id)
+        media = api.location_recent_media(location_id=instagram_location_id[0].id)
+        print "media", media
+        for lst in media:
+            for medium in lst:
+                dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
+                        'comments': medium.comment_count}
+                collection.append(dict)
 
+                # print media
+    except Exception as e:
+        print(e)
+    # return jsonpickle.encode(media)
+
+    print "Collection", collection
+    return json.dumps(collection)
 
 ############
 # APP ROUTES
@@ -150,69 +171,6 @@ def on_callback():
     except Exception as e:
         print(e)
     return get_page()
-
-
-@route('/location_recent_media')
-def location_recent_media():
-    access_token = request.session['access_token']
-    content = "<h2>Location Recent Media</h2>"
-    if not access_token:
-        return 'Missing Access Token'
-    try:
-        api = client.InstagramAPI(access_token=access_token)
-        recent_media, next = api.location_recent_media(location_id=514276)
-        photos = []
-        for media in recent_media:
-            photos.append('<img src="%s"/>' % media.get_standard_resolution_url())
-        content += ''.join(photos)
-    except Exception as e:
-        print(e)
-    return "%s %s <br/>Remaining API Calls = %s/%s" % (get_page(), content, api.x_ratelimit_remaining, api.x_ratelimit)
-
-
-@route('/media_search')
-def media_search():
-    access_token = request.session['access_token']
-    content = "<h2>Media Search</h2>"
-    if not access_token:
-        return 'Missing Access Token'
-    try:
-        api = client.InstagramAPI(access_token=access_token)
-        media_search = api.media_search(lat="37.7808851", lng="-122.3948632", distance=1000)
-        photos = []
-        for media in media_search:
-            photos.append('<img src="%s"/>' % media.get_standard_resolution_url())
-        content += ''.join(photos)
-    except Exception as e:
-        print(e)
-    return "%s %s <br/>Remaining API Calls = %s/%s" % (get_page(), content, api.x_ratelimit_remaining, api.x_ratelimit)
-
-
-@route('/location_media/<id>')
-def location_media(id):
-    access_token = request.session['access_token']
-    collection = []
-    if not access_token:
-        return 'Missing Access Token'
-    try:
-        api = client.InstagramAPI(access_token=access_token)
-        # get instagram location id for this foursquare location id
-        instagram_location_id = api.location_search(foursquare_v2_id=id)
-        media = api.location_recent_media(location_id=instagram_location_id[0].id)
-        print "media", media
-        for lst in media:
-            for medium in lst:
-                dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
-                        'comments': medium.comment_count}
-                collection.append(dict)
-
-                # print media
-    except Exception as e:
-        print(e)
-    # return jsonpickle.encode(media)
-
-    print "Collection", collection
-    return json.dumps(collection)
 
 
 bottle.run(app=app, host='localhost', port=8515, reloader=True)
