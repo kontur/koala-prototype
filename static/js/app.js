@@ -13,7 +13,6 @@ angular.module('Koala.controllers', ['geolocation'])
     .controller('HereController', ['$scope', '$route', 'geolocation', 'Venues', function ($scope, $route, geolocation, Venues) {
         console.log("HereController");
         geolocation.getLocation().then(function(data){
-            $scope.coords = {lat: data.coords.latitude, lng: data.coords.longitude};
             $scope.locations = Venues.show({ v1: data.coords.latitude, v2: data.coords.longitude });
         });
     }])

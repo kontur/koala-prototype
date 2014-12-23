@@ -84,13 +84,15 @@ def find_venues(term, category=None):
     print "term:", term, "category:", category
     venues = venues_search_place(term)
     venues_in_category = []
+    i = f = 0
     if venues:
-        for x in range(0, 3):
-            collection = venues_images(venues['venues'][x]['id'])
+        while (f < 3):
+            collection = venues_images(venues['venues'][i]['id'])
             if len(collection) > 0:
-                venues['venues'][x]['instagram'] = collection[0]
-            venues_in_category.append(venues['venues'][x])
-    # print v
+                f = f + 1
+                venues['venues'][i]['instagram'] = collection[0]
+            venues_in_category.append(venues['venues'][i])
+            i = i + 1
     return json.dumps(venues_in_category)
 
 
@@ -100,13 +102,15 @@ def get_venues(lat, lng, category=None):
     print "lat:", lat, "lng:", lng, "category:", category
     venues = venues_search_geolocation(lat, lng, category)
     venues_in_category = []
+    i = f = 0
     if venues:
-        for x in range(0, 3):
-            collection = venues_images(venues['venues'][x]['id'])
+        while (f < 3):
+            collection = venues_images(venues['venues'][i]['id'])
             if len(collection) > 0:
-                venues['venues'][x]['instagram'] = collection[0]
-            venues_in_category.append(venues['venues'][x])
-    # print v
+                f = f + 1
+                venues['venues'][i]['instagram'] = collection[0]
+            venues_in_category.append(venues['venues'][i])
+            i = i + 1
     return json.dumps(venues_in_category)
 
 
@@ -121,7 +125,6 @@ def location_media(id):
         # get instagram location id for this foursquare location id
         instagram_location_id = api.location_search(foursquare_v2_id=id)
         media = api.location_recent_media(location_id=instagram_location_id[0].id)
-        print "media", media
         for lst in media:
             for medium in lst:
                 dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
