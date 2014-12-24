@@ -4,49 +4,24 @@ import json
 import foursquare
 from bottle import route, redirect, post, run, request, hook, template, static_file
 from instagram import client
+import config
 
 bottle.debug(True)
 
-session_opts = {
-    'session.type': 'file',
-    'session.data_dir': './session/',
-    'session.auto': True,
-}
-
+session_opts = config.SESSION_OPTIONS
+CATEGORIES = config.CATEGORIES
 app = beaker.middleware.SessionMiddleware(bottle.app(), session_opts)
-
-CONFIG = {
-    'client_id': '6175f60283394342b0a720fb596ae0b6',
-    'client_secret': '67534712185146dc8ca6bbe94aabff7b',
-    'redirect_uri': 'http://localhost:8515/app'
-}
-
-FOURSQURE_CLIENT_ID = 'CA1FI3A2KJ3ZDRIUF5DJUZIXXES24XFVICYON34GBBOKBXSB'
-FOURSQURE_CLIENT_SECRET = 'FRHDILCEV0Y0E1WR3VWPWT03X0N01AKZU5SJVHK4M0NE2HF0'
-
-
-CATEGORY_NIGHTLIFE = 'nightlife'
-CATEGORY_FOOD = 'food'
-CATEGORY_CAFE = 'cafes'
-CATEGORY_HOTEL = 'hotels'
-
-CATEGORIES = {
-    CATEGORY_NIGHTLIFE: ['4d4b7105d754a06376d81259'],
-    CATEGORY_FOOD: ['4d4b7105d754a06374d81259'],
-    CATEGORY_CAFE: ['4bf58dd8d48988d16d941735'],
-    CATEGORY_HOTEL: ['4bf58dd8d48988d1fa931735']
-}
-
-unauthenticated_api = client.InstagramAPI(**CONFIG)
+unauthenticated_api = client.InstagramAPI(**config.INSTAGRAM)
 
 
 # ######
 # HOOKS
-#######
+# ######
 
 @hook('before_request')
 def setup_request():
     request.session = request.environ['beaker.session']
+
 
 def join_all_categories():
     str = ""
@@ -54,14 +29,16 @@ def join_all_categories():
         str += ''.join(value) + ','
     return str
 
+
 #########
 # HELPERS
 #########
 def get_page():
     return template('index')
 
+
 def venues_search_place(place, category):
-    fs = foursquare.Foursquare(client_id=FOURSQURE_CLIENT_ID, client_secret=FOURSQURE_CLIENT_SECRET)
+    fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
     params = {'near': place}
     if category:
         if category in CATEGORIES.keys():
@@ -74,8 +51,9 @@ def venues_search_place(place, category):
     results = fs.venues.search(params=params)
     return results
 
+
 def venues_search_geolocation(lat, lng, category=None):
-    fs = foursquare.Foursquare(client_id=FOURSQURE_CLIENT_ID, client_secret=FOURSQURE_CLIENT_SECRET)
+    fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
     params = {'ll': lat + ',' + lng}
     if category:
         if category in CATEGORIES.keys():
@@ -86,6 +64,7 @@ def venues_search_geolocation(lat, lng, category=None):
         params['categoryId'] = join_all_categories()
     results = fs.venues.search(params=params)
     return results
+
 
 def venues_images(foursquare_venue_id):
     access_token = request.session['access_token']
@@ -126,7 +105,7 @@ def find_venues(term, category=None):
             if len(collection) > 0:
                 f = f + 1
                 venues['venues'][i]['instagram'] = collection[0]
-                venues['venues'][i]['instagram_stats'] = { 'num_photos': len(collection) }
+                venues['venues'][i]['instagram_stats'] = {'num_photos': len(collection)}
             venues_in_category.append(venues['venues'][i])
             i = i + 1
     return json.dumps(venues_in_category)
@@ -146,7 +125,7 @@ def get_venues(lat, lng, category=None):
             if len(collection) > 0:
                 f = f + 1
                 venues['venues'][i]['instagram'] = collection[0]
-                venues['venues'][i]['instagram_stats'] = { 'num_photos': len(collection) }
+                venues['venues'][i]['instagram_stats'] = {'num_photos': len(collection)}
             venues_in_category.append(venues['venues'][i])
             i = i + 1
     return json.dumps(venues_in_category)
@@ -169,13 +148,12 @@ def location_media(id):
                         'comments': medium.comment_count}
                 collection.append(dict)
 
-                # print media
     except Exception as e:
         print(e)
-    # return jsonpickle.encode(media)
 
     print "Collection", collection
     return json.dumps(collection)
+
 
 ############
 # APP ROUTES

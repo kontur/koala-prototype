@@ -7,3 +7,4 @@ venv/*
 .idea
 components/bower
 node_modules/
+config.py
