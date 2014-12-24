@@ -14,6 +14,7 @@ app = beaker.middleware.SessionMiddleware(bottle.app(), session_opts)
 unauthenticated_api = client.InstagramAPI(**config.INSTAGRAM)
 
 
+
 # ######
 # HOOKS
 # ######
