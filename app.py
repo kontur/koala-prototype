@@ -191,11 +191,5 @@ def on_callback():
         print(e)
     return get_page()
 
-# koalaapp = app
 
-
-# if __name__ == "__main__":
-#     bottle.run(app=app, host='localhost', port=5000, reloader=True, server='gunicorn')
-
-# bottle.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-# bottle.run(app=app, host='localhost', port=5000, reloader=True, server='gunicorn')
+# bottle.run(app=app, host='localhost', port=5000, reloader=True)
