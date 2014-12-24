@@ -191,7 +191,7 @@ def on_callback():
         print(e)
     return get_page()
 
-koalaapp = app
+# koalaapp = app
 
 
 # if __name__ == "__main__":
