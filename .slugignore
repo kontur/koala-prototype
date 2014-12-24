@@ -1,0 +1,2 @@
+# file to tell heroku to ignore some files (e.g. not falsely detect a node app)
+package.json
