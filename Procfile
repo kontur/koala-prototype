@@ -1,1 +1,1 @@
-web: gunicorn app:app --bind="0.0.0.0:$PORT" --debug --error-logfile=- -R
+web: gunicorn app:app --bind "$HOST:$PORT" --debug --error-logfile=- -R

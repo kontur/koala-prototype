@@ -1,3 +1,4 @@
+import os
 
 # middleware session config
 SESSION_OPTIONS = {
@@ -6,16 +7,18 @@ SESSION_OPTIONS = {
     'session.auto': True,
 }
 
+# get these from environment variables, either from heroku env or .env file
 # instagram api client configuration
 INSTAGRAM = {
-    'client_id': '6175f60283394342b0a720fb596ae0b6',
-    'client_secret': '67534712185146dc8ca6bbe94aabff7b',
-    'redirect_uri': 'http://localhost:8515/app'
+    'client_id': os.environ['INSTA_CLIENT_ID'],
+    'client_secret': os.environ['INSTA_CLIENT_SECRET'],
+    'redirect_uri': os.environ['INSTA_REDIRECT_URL']
 }
 
+# get these from environment variables, either from heroku env or .env file
 # foursquare api client config
-FOURSQURE_CLIENT_ID = 'CA1FI3A2KJ3ZDRIUF5DJUZIXXES24XFVICYON34GBBOKBXSB'
-FOURSQURE_CLIENT_SECRET = 'FRHDILCEV0Y0E1WR3VWPWT03X0N01AKZU5SJVHK4M0NE2HF0'
+FOURSQURE_CLIENT_ID = os.environ['FOURSQUARE_CLIENT_ID']
+FOURSQURE_CLIENT_SECRET = os.environ['FOURSQUARE_CLIENT_SECRET']
 
 # foursquare categories config
 CATEGORY_NIGHTLIFE = 'nightlife'
