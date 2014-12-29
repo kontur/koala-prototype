@@ -122,15 +122,15 @@ def find_venues(term, category=None):
     venues = venues_search_place(term, category)
     venues_in_category = []
     i = f = 0
-    max = min(3, len(venues['venues']) - 1)
+    max = min(3, len(venues) - 1)
     if venues:
         while (f < max):
-            collection = venues_images(venues['venues'][i]['id'], "popular")
+            collection = venues_images(venues[i]['venue']['id'], "popular")
             if len(collection) > 0:
                 f = f + 1
-                venues['venues'][i]['instagram'] = collection[0]
-                venues['venues'][i]['instagram_stats'] = {'num_photos': len(collection)}
-            venues_in_category.append(venues['venues'][i])
+                venues[i]['instagram'] = collection[0]
+                venues[i]['instagram_stats'] = {'num_photos': len(collection)}
+            venues_in_category.append(venues[i])
             i = i + 1
     return json.dumps(venues_in_category)
 
