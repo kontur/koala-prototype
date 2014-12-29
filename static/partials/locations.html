@@ -10,9 +10,15 @@ template: locations.html
 <loading></loading>
 
 <p ng-repeat="location in locations">
-    <a href="#/location/{{ location.id }}">
-        <span>{{ location.name }}</span>
+    <a href="#/location/{{ location.venue.id }}">
+        <span>{{ location.venue.name }}</span>
         <img ng-if="location.instagram.image" ng-src="{{ location.instagram.image }}">
     </a>
-    (some instagram location stats {{ location.instagram_stats }})
+    (foursquare meta data<br>
+    rating: {{ location.venue.rating }}<br>
+    <span ng-if="location.venue.specials > 0">specials: {{ location.venue.specials }}<br></span>
+    tips: <span ng-repeat="tip in location.tips">{{ tip.text }} by {{ tip.user.firstName }}</span><br>
+    price: {{ location.venue.price.message }})
+
+    (some instagram meta data {{ location.instagram_stats }})
 </p>

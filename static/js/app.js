@@ -1,4 +1,4 @@
-/*!  - v0.0.0 - 2014-12-24
+/*!  - v0.0.0 - 2014-12-29
 * https://github.com/kontur/koala-prototype
 * Copyright (c) 2014 ; Licensed  */
 angular.module('Koala.controllers', ['geolocation'])
@@ -30,7 +30,7 @@ angular.module('Koala.controllers', ['geolocation'])
             console.log("HereCategoryController");
             $scope.loading = true;
             geolocation.getLocation().then(function (data) {
-                $scope.places = Venues.show({ v1: data.coords.latitude, v2: data.coords.longitude, v3: $route.current.params.category },
+                $scope.locations = Venues.show({ v1: data.coords.latitude, v2: data.coords.longitude, v3: $route.current.params.category },
                     function () {
                         $scope.loading = false;
                     }, function () {

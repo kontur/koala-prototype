@@ -27,7 +27,7 @@ angular.module('Koala.controllers', ['geolocation'])
             console.log("HereCategoryController");
             $scope.loading = true;
             geolocation.getLocation().then(function (data) {
-                $scope.places = Venues.show({ v1: data.coords.latitude, v2: data.coords.longitude, v3: $route.current.params.category },
+                $scope.locations = Venues.show({ v1: data.coords.latitude, v2: data.coords.longitude, v3: $route.current.params.category },
                     function () {
                         $scope.loading = false;
                     }, function () {

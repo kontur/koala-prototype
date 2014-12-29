@@ -5,6 +5,8 @@ import foursquare
 from bottle import route, redirect, post, run, request, hook, template, static_file, default_app
 from instagram import client
 import config
+import calendar
+import time
 
 bottle.debug(True)
 
@@ -49,13 +51,15 @@ def venues_search_place(place, category):
     else:
         params['categoryId'] = join_all_categories()
 
-    results = fs.venues.search(params=params)
-    return results
+    # results = fs.venues.search(params=params)
+    # return results
+    results = fs.venues.explore(params=params)
+    return results['groups'][0]['items']
 
 
 def venues_search_geolocation(lat, lng, category=None):
     fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
-    params = {'ll': lat + ',' + lng}
+    params = {'ll': lat + ',' + lng,}
     if category:
         if category in CATEGORIES.keys():
             params['categoryId'] = ''.join(CATEGORIES[category])
@@ -63,11 +67,19 @@ def venues_search_geolocation(lat, lng, category=None):
             raise ValueError('Provided category not found', category)
     else:
         params['categoryId'] = join_all_categories()
-    results = fs.venues.search(params=params)
-    return results
+
+    results = fs.venues.explore(params=params)
+    #print results['groups']
+
+    #TODO get this rate call working
+    # print "RATE REMAINING", fs.rate_remaining()
+
+    #TODO check what other groups this returns?!
+    return results['groups'][0]['items']
+    # return results
 
 
-def venues_images(foursquare_venue_id):
+def venues_images(foursquare_venue_id, sort_by=None):
     access_token = request.session['access_token']
     collection = []
     if not access_token:
@@ -79,16 +91,25 @@ def venues_images(foursquare_venue_id):
 
         for lst in media:
             for medium in lst:
-                print medium.user
-                dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
-                        'comments': medium.comment_count, 'api_calls_remaining': api.x_ratelimit_remaining,
-                        }
+                dict = {
+                    'type': medium.type,
+                    'image': medium.get_standard_resolution_url(),
+                    'likes': medium.like_count,
+                    'comments': medium.comment_count,
+                    'api_calls_remaining': api.x_ratelimit_remaining,
+                    'user': medium.user.username,
+                    'user_profile': medium.user.profile_picture,
+                    'created_time': time.asctime(medium.created_time.timetuple())
+                }
                 collection.append(dict)
     except Exception as e:
         print(e)
 
-    return collection
+    if sort_by and sort_by is "popular":
+        collection = sorted(collection, key=lambda k: k['likes'])
+        collection.reverse()
 
+    return collection
 
 ############
 # API ROUTES
@@ -104,7 +125,7 @@ def find_venues(term, category=None):
     max = min(3, len(venues['venues']) - 1)
     if venues:
         while (f < max):
-            collection = venues_images(venues['venues'][i]['id'])
+            collection = venues_images(venues['venues'][i]['id'], "popular")
             if len(collection) > 0:
                 f = f + 1
                 venues['venues'][i]['instagram'] = collection[0]
@@ -121,22 +142,22 @@ def get_venues(lat, lng, category=None):
     venues = venues_search_geolocation(lat, lng, category)
     venues_in_category = []
     i = f = 0
-    max = min(3, len(venues['venues']) - 1)
+    max = min(3, len(venues) - 1)
     if venues:
         while (f < max):
-            collection = venues_images(venues['venues'][i]['id'])
+            collection = venues_images(venues[i]['venue']['id'], "popular")
             if len(collection) > 0:
                 f = f + 1
-                venues['venues'][i]['instagram'] = collection[0]
-                venues['venues'][i]['instagram_stats'] = {'num_photos': len(collection)}
-            venues_in_category.append(venues['venues'][i])
+                venues[i]['instagram'] = collection[0]
+                venues[i]['instagram_stats'] = {'num_photos': len(collection)}
+            venues_in_category.append(venues[i])
             i = i + 1
     return json.dumps(venues_in_category)
 
 
 @route('/api/venue/<id>')
 def location_media(id):
-    collection = venues_images(id)
+    collection = venues_images(id, "popular")
     return json.dumps(collection)
 
 
