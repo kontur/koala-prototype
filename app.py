@@ -79,8 +79,10 @@ def venues_images(foursquare_venue_id):
 
         for lst in media:
             for medium in lst:
+                print medium.user
                 dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
-                        'comments': medium.comment_count}
+                        'comments': medium.comment_count, 'api_calls_remaining': api.x_ratelimit_remaining,
+                        }
                 collection.append(dict)
     except Exception as e:
         print(e)
@@ -134,25 +136,7 @@ def get_venues(lat, lng, category=None):
 
 @route('/api/venue/<id>')
 def location_media(id):
-    access_token = request.session['access_token']
-    collection = []
-    if not access_token:
-        return 'Missing Access Token'
-    try:
-        api = client.InstagramAPI(access_token=access_token)
-        # get instagram location id for this foursquare location id
-        instagram_location_id = api.location_search(foursquare_v2_id=id)
-        media = api.location_recent_media(location_id=instagram_location_id[0].id)
-        for lst in media:
-            for medium in lst:
-                dict = {'type': medium.type, 'image': medium.get_standard_resolution_url(), 'likes': medium.like_count,
-                        'comments': medium.comment_count}
-                collection.append(dict)
-
-    except Exception as e:
-        print(e)
-
-    print "Collection", collection
+    collection = venues_images(id)
     return json.dumps(collection)
 
 
