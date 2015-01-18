@@ -139,6 +139,12 @@ def find_venues(term, category=None):
 @route('/api/venues/show/<lat>/<lng>/<category>')
 def get_venues(lat, lng, category=None):
     print "lat:", lat, "lng:", lng, "category:", category
+
+    # TODO smarter way of pushing possibly existing request.query access_token to session for all calls
+    if 'access_token' in request.query.keys():
+        request.session['access_token'] = request.query['access_token']
+
+
     venues = venues_search_geolocation(lat, lng, category)
     venues_in_category = []
     i = f = 0
