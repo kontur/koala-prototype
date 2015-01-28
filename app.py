@@ -1,5 +1,5 @@
 import bottle
-import beaker.middleware
+import beaker.middleware #TODO remove sessions everywhere
 import json
 import foursquare
 from bottle import route, redirect, post, run, request, hook, template, static_file, default_app
@@ -184,6 +184,10 @@ def location_media(id):
 #     except Exception as e:
 #         print(e)
 #
+@route('/')
+def home():
+    return '<a href="http://koala-prototype.meteor.com">prototype frontend moved, click me :)</a>'
+
 #
 # @route('/app')
 # def on_callback():
