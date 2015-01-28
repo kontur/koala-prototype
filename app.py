@@ -36,8 +36,8 @@ def join_all_categories():
 #########
 # HELPERS
 #########
-def get_page():
-    return template('index')
+# def get_page():
+#     return template('index')
 
 
 def venues_search_place(place, category):
@@ -166,42 +166,42 @@ def location_media(id):
     collection = venues_images(id, "popular")
     return json.dumps(collection)
 
-
-############
-# APP ROUTES
-############
-
-@route('/static/<filepath:path>')
-def server_static(filepath):
-    return static_file(filepath, root='./static')
-
-
-@route('/')
-def home():
-    try:
-        url = unauthenticated_api.get_authorize_url(scope=["likes", "comments"])
-        return '<a href="%s">Connect with Instagram</a>' % url
-    except Exception as e:
-        print(e)
-
-
-@route('/app')
-def on_callback():
-    code = request.GET.get("code")
-    if not code:
-        access_token = request.session['access_token']
-        if not access_token:
-            return 'Missing code'
-    try:
-        access_token, user_info = unauthenticated_api.exchange_code_for_access_token(code)
-        if not access_token:
-            return 'Could not get access token'
-        api = client.InstagramAPI(access_token=access_token)
-        request.session['access_token'] = access_token
-        print ("access token=" + access_token)
-    except Exception as e:
-        print(e)
-    return get_page()
+#
+# ############
+# # APP ROUTES
+# ############
+#
+# @route('/static/<filepath:path>')
+# def server_static(filepath):
+#     return static_file(filepath, root='./static')
+#
+#
+# @route('/')
+# def home():
+#     try:
+#         url = unauthenticated_api.get_authorize_url(scope=["likes", "comments"])
+#         return '<a href="%s">Connect with Instagram</a>' % url
+#     except Exception as e:
+#         print(e)
+#
+#
+# @route('/app')
+# def on_callback():
+#     code = request.GET.get("code")
+#     if not code:
+#         access_token = request.session['access_token']
+#         if not access_token:
+#             return 'Missing code'
+#     try:
+#         access_token, user_info = unauthenticated_api.exchange_code_for_access_token(code)
+#         if not access_token:
+#             return 'Could not get access token'
+#         api = client.InstagramAPI(access_token=access_token)
+#         request.session['access_token'] = access_token
+#         print ("access token=" + access_token)
+#     except Exception as e:
+#         print(e)
+#     return get_page()
 
 
 # bottle.run(app=app, host='localhost', port=5000, reloader=True)
