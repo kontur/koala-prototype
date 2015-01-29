@@ -1,29 +1,18 @@
 import bottle
-import beaker.middleware  # TODO remove sessions everywhere
 import json
 import foursquare
 from bottle import route, redirect, post, run, request, hook, template, static_file, default_app
 from instagram import client, models
 import config
-import calendar
 import time
+from datetime import datetime
 
 bottle.debug(True)
 
-session_opts = config.SESSION_OPTIONS
 CATEGORIES = config.CATEGORIES
-app = beaker.middleware.SessionMiddleware(bottle.app(), session_opts)
+app = bottle.app()
 unauthenticated_api = client.InstagramAPI(**config.INSTAGRAM)
 
-
-
-# ######
-# HOOKS
-# ######
-
-@hook('before_request')
-def setup_request():
-    request.session = request.environ['beaker.session']
 
 
 def join_all_categories():
@@ -81,13 +70,10 @@ def venues_search_geolocation(lat, lng, category=None):
 
 def venues_images(access_token, foursquare_venue_id, sort_by=None):
     collection = []
-    # try:
     api = client.InstagramAPI(access_token=access_token)
     location = api.location_search(foursquare_v2_id=foursquare_venue_id)
-    # print "location", location
     if len(location) > 0:
         media = api.location_recent_media(location_id=location[0].id)
-    # print "media", media
     else:
         return
 
@@ -130,7 +116,7 @@ def venues_images(access_token, foursquare_venue_id, sort_by=None):
 @route('/api/venues/search/<term>', defaults={'category': None})
 @route('/api/venues/search/<term>/<category>')
 def find_venues(term, category=None):
-    print "term:", term, "category:", category
+    print str(datetime.now()), "term:", term, "category:", category
 
     if 'access_token' in request.query.keys():
         access_token = request.query['access_token']
@@ -147,7 +133,7 @@ def find_venues(term, category=None):
     venues = venues_search_place(term, category)
     venues_in_category = []
     i = f = 0
-    max = min(limit, len(venues) - 1)
+    max = min(int(limit), len(venues) - 1)
     if venues:
         while (f < max):
             collection = venues_images(venues[i]['venue']['id'], "popular")
@@ -157,46 +143,55 @@ def find_venues(term, category=None):
                 venues[i]['instagram_stats'] = {'num_photos': len(collection)}
             venues_in_category.append(venues[i])
             i = i + 1
+
+    print str(datetime.now())
     return json.dumps(venues_in_category)
 
 
 @route('/api/venues/show/<lat>/<lng>', defaults={'category': None})
 @route('/api/venues/show/<lat>/<lng>/<category>')
 def get_venues(lat, lng, category=None):
-    print "lat:", lat, "lng:", lng, "category:", category
+    print str(datetime.now()), "lat:", lat, "lng:", lng, "category:", category
 
-    if 'access_token' in request.query.keys():
-        access_token = request.query['access_token']
-        if not access_token:
-            return 'Invalid access_token'
-    else:
-        return 'Missing access_token'
+    try:
+        if 'access_token' in request.query.keys():
+            access_token = request.query['access_token']
+            if not access_token:
+                raise Exception('Invalid access_token')
+        else:
+            raise Exception('Missing access_token')
 
-    if 'limit' in request.query.keys():
-        limit = request.query['limit']
-    else:
-        limit = 3
+        if 'limit' in request.query.keys():
+            limit = request.query['limit']
+        else:
+            limit = 3
 
-    venues = venues_search_geolocation(lat, lng, category)
-    venues_in_category = []
-    i = f = 0
-    max = min(limit, len(venues) - 1)
-    if venues:
-        while (f < max):
-            collection = venues_images(access_token, venues[i]['venue']['id'], "popular")
-            if collection and len(collection) > 0:
-                f = f + 1
-                venues[i]['instagram'] = collection[0]
-                venues[i]['instagram_stats'] = {'num_photos': len(collection)}
-            venues_in_category.append(venues[i])
-            i = i + 1
+        venues = venues_search_geolocation(lat, lng, category)
+        venues_in_category = []
+        i = f = 0
+        max = min(int(limit), (len(venues) - 1))
+        if venues:
+            while (f < max):
+                collection = venues_images(access_token, venues[i]['venue']['id'], "popular")
+                if collection and len(collection) > 0:
+                    f = f + 1
+                    venues[i]['instagram'] = collection[0]
+                    venues[i]['instagram_stats'] = {'num_photos': len(collection)}
+                venues_in_category.append(venues[i])
+                i = i + 1
 
-    return json.dumps(venues_in_category)
+        print str(datetime.now())
+        return json.dumps(venues_in_category)
+    except Exception as e:
+        print str(datetime.now())
+        print e
+        return "api/venues/show returned error"
+
 
 
 @route('/api/venue/<id>')
 def location_media(id):
-
+    print str(datetime.now())
     if 'access_token' in request.query.keys():
         access_token = request.query['access_token']
         if not access_token:
@@ -205,6 +200,7 @@ def location_media(id):
         return 'Missing access_token'
 
     collection = venues_images(id, "popular")
+    print str(datetime.now())
     return json.dumps(collection)
 
 
