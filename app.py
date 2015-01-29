@@ -103,12 +103,9 @@ def venues_images(access_token, foursquare_venue_id, sort_by=None):
     except Exception as e:
         print(e)
         # return e
-
-
     if sort_by and sort_by is "popular":
         collection = sorted(collection, key=lambda k: k['likes'])
         collection.reverse()
-
     return collection
 
 
@@ -116,6 +113,8 @@ def venue_info(access_token, foursquare_venue_id):
     try:
         fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
         result = fs.venues(foursquare_venue_id)
+        print "FS API calls remaingin", fs.rate_remaining
+        result['api_calls_remaining'] = fs.rate_remaining
         return result
     except Exception as e:
         print e
@@ -215,7 +214,7 @@ def location_media(id):
 
         venue = venue_info(access_token, id)
         collection = venues_images(access_token, id, "popular")
-        result = { 'venue': venue['venue'], 'images': collection }
+        result = { 'venue': venue['venue'], 'images': collection, 'fq_api_calls_remaining': venue['api_calls_remaining'] }
         print str(datetime.now())
         return json.dumps(result)
     except Exception as e:

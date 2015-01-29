@@ -1,12 +1,13 @@
 Beaker==1.6.4
 bottle==0.12.7
-foursquare==20130707
+foursquare==2014.04.23a
 gunicorn==19.1.1
 httplib2==0.9
 jsonpickle==0.8.0
 poster==0.8.1
 python-instagram==1.1.3
 redis==2.10.3
+requests==2.5.1
 simplejson==3.6.3
 six==1.8.0
 wsgiref==0.1.2
