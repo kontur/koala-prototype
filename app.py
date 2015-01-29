@@ -112,6 +112,16 @@ def venues_images(access_token, foursquare_venue_id, sort_by=None):
     return collection
 
 
+def venue_info(access_token, foursquare_venue_id):
+    try:
+        fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
+        result = fs.venues(foursquare_venue_id)
+        return result
+    except Exception as e:
+        print e
+        return False
+
+
 # ###########
 # API ROUTES
 ############
@@ -195,16 +205,23 @@ def get_venues(lat, lng, category=None):
 @route('/api/venue/<id>')
 def location_media(id):
     print str(datetime.now())
-    if 'access_token' in request.query.keys():
-        access_token = request.query['access_token']
-        if not access_token:
-            return 'Invalid access_token'
-    else:
-        return 'Missing access_token'
+    try:
+        if 'access_token' in request.query.keys():
+            access_token = request.query['access_token']
+            if not access_token:
+                raise Exception('Invalid access_token')
+        else:
+            raise Exception('Missing access_token')
 
-    collection = venues_images(id, "popular")
-    print str(datetime.now())
-    return json.dumps(collection)
+        venue = venue_info(access_token, id)
+        collection = venues_images(access_token, id, "popular")
+        result = { 'venue': venue['venue'], 'images': collection }
+        print str(datetime.now())
+        return json.dumps(result)
+    except Exception as e:
+        print str(datetime.now())
+        print e
+        return "api/venue/id returned error"
 
 
 @route('/')
