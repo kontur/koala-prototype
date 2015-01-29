@@ -63,6 +63,9 @@ def venues_search_geolocation(lat, lng, category=None):
     #TODO get this rate call working
     # print "RATE REMAINING", fs.rate_remaining()
 
+    print "fs.venues.explore, results[groups] len", len(results['groups'])
+    # print results['groups'][0]['items']
+
     #TODO check what other groups this returns?!
     return results['groups'][0]['items']
     # return results
