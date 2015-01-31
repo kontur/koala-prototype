@@ -14,7 +14,6 @@ app = bottle.app()
 unauthenticated_api = client.InstagramAPI(**config.INSTAGRAM)
 
 
-
 def join_all_categories():
     str = ""
     for key, value in CATEGORIES.iteritems():
@@ -30,6 +29,7 @@ def tokenFromRequest(request):
         return access_token
     else:
         raise Exception('Missing access_token')
+
 
 # ########
 # HELPERS
@@ -69,13 +69,13 @@ def venues_search_geolocation(lat, lng, category=None):
     results = fs.venues.explore(params=params)
     # print results['groups']
 
-    #TODO get this rate call working
+    # TODO get this rate call working
     # print "RATE REMAINING", fs.rate_remaining()
 
     print "fs.venues.explore, results[groups] len", len(results['groups'])
     # print results['groups'][0]['items']
 
-    #TODO check what other groups this returns?!
+    # TODO check what other groups this returns?!
     return results['groups'][0]['items']
     # return results
 
@@ -96,7 +96,6 @@ def venues_images(access_token, foursquare_venue_id, sort_by=None):
                     # TODO WTF is going on here, why would there by some strings spread over an array in this lst?
                     # print type(medium)
                     if (medium and type(medium) is models.Media):
-
                         # print "medium", medium
                         dict = {
                             'instagram_id': medium.id,
@@ -157,7 +156,7 @@ def instagram_comments(access_token, instagram_id):
 
 # ###########
 # API ROUTES
-############
+# ###########
 
 @route('/api/venues/search/<term>', defaults={'category': None})
 @route('/api/venues/search/<term>/<category>')
@@ -234,7 +233,6 @@ def get_venues(lat, lng, category=None):
         return "api/venues/show returned error"
 
 
-
 @route('/api/venue/<id>')
 def location_media(id):
     print str(datetime.now())
@@ -248,7 +246,7 @@ def location_media(id):
 
         venue = venue_info(id)
         collection = venues_images(access_token, id, "popular")
-        result = { 'venue': venue['venue'], 'images': collection, 'fq_api_calls_remaining': venue['api_calls_remaining'] }
+        result = {'venue': venue['venue'], 'images': collection, 'fq_api_calls_remaining': venue['api_calls_remaining']}
         print str(datetime.now())
         return json.dumps(result)
     except Exception as e:
@@ -263,13 +261,82 @@ def image_comments(id):
     try:
         access_token = tokenFromRequest(request)
         result = instagram_comments(access_token, id)
-        print "image comments", result
-        print "image json", json.dumps(result)
         return json.dumps(result)
     except Exception as e:
         print str(datetime.now())
         print e
         return "api/image_comments/id returned error"
+
+
+# TODO fix these are complete SUDO results, just instagram trending people, nothing to do with venue photos
+@route('/api/trendsetters/<lat>/<lng>')
+def trendsetters(lat, lng):
+    print str(datetime.now())
+    try:
+        access_token = tokenFromRequest(request)
+        api = client.InstagramAPI(access_token=access_token)
+        #TODO get limit from query param
+        result = api.media_popular(count=2)
+        users = []
+        for media in result:
+            # print media.images['standard_resolution'].url
+            dict = {
+                'username': media.user.username,
+                'id': media.user.id,
+                'profile_picture': media.user.profile_picture
+            }
+            users.append(dict)
+
+        return json.dumps(users)
+
+    except Exception as e:
+        print str(datetime.now())
+        print e
+        return "api/transetters returned error"
+
+
+# TODO checkout proper logging library instead of noobster printing times etc...
+# TODO return http errors, not text
+
+
+@route('/api/user/network/feed')
+def network_summary():
+    try:
+        access_token = tokenFromRequest(request)
+        api = client.InstagramAPI(access_token=access_token)
+        #TODO count from query param
+        media = api.user_media_feed(count=4)
+
+        collection = []
+
+        try:
+            for lst in media:
+                if lst:
+                    for medium in lst:
+                        # TODO WTF is going on here, why would there by some strings spread over an array in this lst?
+                        # print type(medium)
+                        if (medium and type(medium) is models.Media):
+                            # print "medium", medium
+                            dict = {
+                                'instagram_id': medium.id,
+                                'type': medium.type,
+                                'image': medium.get_standard_resolution_url(),
+                                'likes': medium.like_count,
+                                'comments_count': medium.comment_count,
+                                'api_calls_remaining': api.x_ratelimit_remaining,
+                                'user': medium.user.username,
+                                'user_profile': medium.user.profile_picture,
+                                'created_time': time.asctime(medium.created_time.timetuple())
+                            }
+                            collection.append(dict)
+        except Exception as e:
+            print(e)
+            # return e
+
+        return json.dumps(collection)
+    except Exception as e:
+        print e
+        return "api/user/network/feed returned error"
 
 
 @route('/')
