@@ -22,6 +22,15 @@ def join_all_categories():
     return str
 
 
+def tokenFromRequest(request):
+    if 'access_token' in request.query.keys():
+        access_token = request.query['access_token']
+        if not access_token:
+            raise Exception('Invalid access_token')
+        return access_token
+    else:
+        raise Exception('Missing access_token')
+
 # ########
 # HELPERS
 # ########
@@ -90,10 +99,11 @@ def venues_images(access_token, foursquare_venue_id, sort_by=None):
 
                         # print "medium", medium
                         dict = {
+                            'instagram_id': medium.id,
                             'type': medium.type,
                             'image': medium.get_standard_resolution_url(),
                             'likes': medium.like_count,
-                            'comments': medium.comment_count,
+                            'comments_count': medium.comment_count,
                             'api_calls_remaining': api.x_ratelimit_remaining,
                             'user': medium.user.username,
                             'user_profile': medium.user.profile_picture,
@@ -109,7 +119,7 @@ def venues_images(access_token, foursquare_venue_id, sort_by=None):
     return collection
 
 
-def venue_info(access_token, foursquare_venue_id):
+def venue_info(foursquare_venue_id):
     try:
         fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
         result = fs.venues(foursquare_venue_id)
@@ -118,6 +128,30 @@ def venue_info(access_token, foursquare_venue_id):
         return result
     except Exception as e:
         print e
+        return False
+
+
+def instagram_comments(access_token, instagram_id):
+    try:
+        api = client.InstagramAPI(access_token=access_token)
+        result = api.media_comments(instagram_id)
+        comments = []
+        print len(result)
+        print result
+        if result:
+            for v in result:
+                comments.append({
+                    'text': v.text,
+                    'username': v.user.username,
+                    'profile_picture': v.user.profile_picture
+                })
+
+            print comments
+            return comments
+        else:
+            return False
+    except Exception as e:
+        print "excep", e
         return False
 
 
@@ -212,7 +246,7 @@ def location_media(id):
         else:
             raise Exception('Missing access_token')
 
-        venue = venue_info(access_token, id)
+        venue = venue_info(id)
         collection = venues_images(access_token, id, "popular")
         result = { 'venue': venue['venue'], 'images': collection, 'fq_api_calls_remaining': venue['api_calls_remaining'] }
         print str(datetime.now())
@@ -223,6 +257,22 @@ def location_media(id):
         return "api/venue/id returned error"
 
 
+@route('/api/image_comments/<id>')
+def image_comments(id):
+    print str(datetime.now())
+    try:
+        access_token = tokenFromRequest(request)
+        result = instagram_comments(access_token, id)
+        print "image comments", result
+        print "image json", json.dumps(result)
+        return json.dumps(result)
+    except Exception as e:
+        print str(datetime.now())
+        print e
+        return "api/image_comments/id returned error"
+
+
 @route('/')
 def home():
     return '<a href="http://koala-prototype.meteor.com">prototype frontend moved, click me :)</a>'
+
