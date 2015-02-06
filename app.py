@@ -473,6 +473,8 @@ def serve_img(color, filename):
             r, g, b, a = pixels[x, y]
             if (r, g, b) == (R_OLD, G_OLD, B_OLD):
                 pixels[x, y] = (int(cols[0]), int(cols[1]), int(cols[2]), a)
+
+    # TODO save icon per color in name
     im.save("icons/" + name[1])
     return static_file(name[1], root='icons', mimetype='image/png')
 
