@@ -38,6 +38,18 @@ def tokenFromRequest(request):
 # return template('index')
 
 
+def venues_get_id(id):
+    fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
+
+    results = fs.venues(id)
+    # print "results", results
+    # return []
+    # print "numgroups", len(results['groups'])
+    print results['groups'][0]
+    return results['groups'][0]['items']
+
+
+
 def venues_search_place(place, category):
     fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
     params = {'near': place}
@@ -269,13 +281,14 @@ def image_comments(id):
 
 
 # TODO fix these are complete SUDO results, just instagram trending people, nothing to do with venue photos
+# idea for this: query instagram top 100 popular, crosscheck for photos with location / venue, show those for now?
 @route('/api/trendsetters/<lat>/<lng>')
 def trendsetters(lat, lng):
     print str(datetime.now())
     try:
         access_token = tokenFromRequest(request)
         api = client.InstagramAPI(access_token=access_token)
-        #TODO get limit from query param
+        # TODO get limit from query param
         result = api.media_popular(count=2)
         users = []
         for media in result:
@@ -304,8 +317,10 @@ def network_summary():
     try:
         access_token = tokenFromRequest(request)
         api = client.InstagramAPI(access_token=access_token)
-        #TODO count from query param
+        # TODO count from query param
         media = api.user_media_feed(count=4)
+
+        print access_token
 
         collection = []
 
@@ -316,7 +331,14 @@ def network_summary():
                         # TODO WTF is going on here, why would there by some strings spread over an array in this lst?
                         # print type(medium)
                         if (medium and type(medium) is models.Media):
-                            # print "medium", medium
+                            print "MEDIUM", medium
+
+                            print dir(medium)
+
+                            # if medium.location:
+                            # print "LOCATION", medium.location
+                            # else:
+                            # print "LOCATION none"
                             dict = {
                                 'instagram_id': medium.id,
                                 'type': medium.type,
@@ -326,7 +348,8 @@ def network_summary():
                                 'api_calls_remaining': api.x_ratelimit_remaining,
                                 'user': medium.user.username,
                                 'user_profile': medium.user.profile_picture,
-                                'created_time': time.asctime(medium.created_time.timetuple())
+                                'created_time': time.asctime(medium.created_time.timetuple()),
+                                # 'location': medium.location
                             }
                             collection.append(dict)
         except Exception as e:
@@ -337,6 +360,86 @@ def network_summary():
     except Exception as e:
         print e
         return "api/user/network/feed returned error"
+
+
+
+# just a test route to see how much photos have venue info
+# TODO WIP
+@route('/api/popular')
+def popular():
+    access_token = tokenFromRequest(request)
+    api = client.InstagramAPI(access_token=access_token)
+    # TODO count from query param
+    # media = api.user_media_feed(count=4)
+
+    c = 10
+    withlocation = 0
+    withoutlocation = 0
+    media = api.media_popular(count=c)
+
+    print access_token
+    print media
+
+    collection = []
+
+    try:
+        for medium in media:
+            if medium:
+                # print "lst", lst
+                # for medium in lst:
+                # TODO WTF is going on here, why would there by some strings spread over an array in this lst?
+                print type(medium)
+                print medium.id, medium.type
+
+                if hasattr(medium, "location"):
+                    print "LOCATION", medium.location
+                    withlocation += 1
+
+                    print medium.location.point.latitude
+
+                    print medium.location.id
+                    print medium.location.name
+
+                    fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
+                    params = {
+                        'query': medium.location.name,
+                        'll': str(medium.location.point.latitude) + "," + str(medium.location.point.longitude)
+                    }
+
+                    results = fs.venues.search(params=params)
+
+                    print "RESULTS", results
+
+
+                    # location = venues_get_id(medium.location.id)
+                    dict = {
+                        'type': medium.type,
+                        'id': medium.id
+                    }
+                    collection.append(dict)
+
+                else:
+                    print "NO LOCATION"
+                    withoutlocation += 1
+
+
+                    # if (medium and type(medium) is models.Media):
+                    # print "MEDIUM", medium
+                    # dict = {
+                    # 'instagram_id': medium.id,
+                    # 'type': medium.type,
+                    # }
+                    # collection.append(dict)
+
+        print withlocation, c, withlocation / c, float(float(withlocation) / float(c))
+        perc = float(float(withlocation) / float(c)) * 100
+        print c, withlocation, perc
+
+        return json.dumps(collection)
+    except Exception as e:
+        print e
+
+    return False
 
 
 @route('/')
