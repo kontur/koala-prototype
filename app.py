@@ -446,3 +446,33 @@ def popular():
 def home():
     return '<a href="http://koala-prototype.meteor.com">prototype frontend moved, click me :)</a>'
 
+
+from PIL import Image
+import urllib, cStringIO
+
+R_OLD, G_OLD, B_OLD = (255, 255, 255)
+R_NEW, G_NEW, B_NEW = (0, 174, 239)
+
+
+#https://ss3.4sqi.net/img/categories_v2/food/mediterranean_32.png
+@app.route('/file/icon/<color>/<filename:path>')
+def serve_img(color, filename):
+    f = urllib.unquote_plus(filename)
+    name = f.rsplit('/', 1)
+
+    # TODO check that those color values are valid rgb values; default to something
+    cols = color.split(",")
+
+    file = cStringIO.StringIO(urllib.urlopen(f).read())
+    im = Image.open(file)
+    pixels = im.load()
+
+    width, height = im.size
+    for x in range(width):
+        for y in range(height):
+            r, g, b, a = pixels[x, y]
+            if (r, g, b) == (R_OLD, G_OLD, B_OLD):
+                pixels[x, y] = (int(cols[0]), int(cols[1]), int(cols[2]), a)
+    im.save("icons/" + name[1])
+    return static_file(name[1], root='icons', mimetype='image/png')
+

@@ -8,3 +8,4 @@ venv/*
 components/bower
 node_modules/
 .env
+icons/*
