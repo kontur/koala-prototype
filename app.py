@@ -6,12 +6,18 @@ from instagram import client, models
 import config
 import time
 from datetime import datetime
+from urlparse import urlparse
 
 bottle.debug(True)
 
 CATEGORIES = config.CATEGORIES
 app = bottle.app()
 unauthenticated_api = client.InstagramAPI(**config.INSTAGRAM)
+
+
+# ########
+# HELPERS
+# ########
 
 
 def join_all_categories():
@@ -21,33 +27,40 @@ def join_all_categories():
     return str
 
 
-def tokenFromRequest(request):
-    if 'access_token' in request.query.keys():
-        access_token = request.query['access_token']
-        if not access_token:
-            raise Exception('Invalid access_token')
-        return access_token
+
+
+def limitFromRequest(request, default=3):
+    if 'limit' in request.query.keys():
+        return request.query['limit']
     else:
-        raise Exception('Missing access_token')
+        return default
 
+def fromRequest(request, param, default):
+    print "fromRequest", param
 
-# ########
-# HELPERS
-# ########
-# def get_page():
-# return template('index')
+    if param in request.query.keys():
+        return request.query[param]
+    else:
+        if default:
+            return default
+        else:
+            return False
+
+def fromRequestObj(request, object):
+    defaulted = {}
+    for key in object.keys():
+        print "fromReqObj", key, object[key]
+        defaulted[key] = fromRequest(request, key, object[key])
+
+    print "defaulted", defaulted
+    return defaulted
 
 
 def venues_get_id(id):
     fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
-
     results = fs.venues(id)
-    # print "results", results
-    # return []
-    # print "numgroups", len(results['groups'])
     print results['groups'][0]
     return results['groups'][0]['items']
-
 
 
 def venues_search_place(place, category):
@@ -60,9 +73,6 @@ def venues_search_place(place, category):
             raise ValueError('Provided category not found', category)
     else:
         params['categoryId'] = join_all_categories()
-
-    # results = fs.venues.search(params=params)
-    # return results
     results = fs.venues.explore(params=params)
     return results['groups'][0]['items']
 
@@ -89,7 +99,6 @@ def venues_search_geolocation(lat, lng, category=None):
 
     # TODO check what other groups this returns?!
     return results['groups'][0]['items']
-    # return results
 
 
 def venues_images(access_token, foursquare_venue_id, sort_by=None):
@@ -123,7 +132,7 @@ def venues_images(access_token, foursquare_venue_id, sort_by=None):
                         collection.append(dict)
     except Exception as e:
         print(e)
-        # return e
+
     if sort_by and sort_by is "popular":
         collection = sorted(collection, key=lambda k: k['likes'])
         collection.reverse()
@@ -175,17 +184,8 @@ def instagram_comments(access_token, instagram_id):
 def find_venues(term, category=None):
     print str(datetime.now()), "term:", term, "category:", category
 
-    if 'access_token' in request.query.keys():
-        access_token = request.query['access_token']
-        if not access_token:
-            return 'Invalid access_token'
-    else:
-        return 'Missing access_token'
-
-    if 'limit' in request.query.keys():
-        limit = request.query['limit']
-    else:
-        limit = 3
+    access_token = fromRequest(request, 'access_token', False)
+    limit = limitFromRequest(request, 3)
 
     venues = venues_search_place(term, category)
     venues_in_category = []
@@ -205,25 +205,62 @@ def find_venues(term, category=None):
     return json.dumps(venues_in_category)
 
 
-@route('/api/venues/show/<lat>/<lng>', defaults={'category': None})
-@route('/api/venues/show/<lat>/<lng>/<category>')
-def get_venues(lat, lng, category=None):
-    print str(datetime.now()), "lat:", lat, "lng:", lng, "category:", category
+
+
+
+# Retrieves a list of venues based on a geolocation
+# @route('/api/venues/show/<lat>/<lng>', defaults={'category': None})
+@route('/api/venues/show/<lat>/<lng>')
+def api_venues_show(lat, lng):
+    print str(datetime.now()), "lat:", lat, "lng:", lng
+
+    for key in request.query.decode():
+        print "request param", key, request.query[key]
 
     try:
-        if 'access_token' in request.query.keys():
-            access_token = request.query['access_token']
-            if not access_token:
-                raise Exception('Invalid access_token')
-        else:
-            raise Exception('Missing access_token')
+        access_token = fromRequest(request, 'access_token', False)
+        limit = fromRequest(request, 'limit', 3)
 
-        if 'limit' in request.query.keys():
-            limit = request.query['limit']
-        else:
-            limit = 3
 
-        venues = venues_search_geolocation(lat, lng, category)
+        requestParams = fromRequestObj(request, {
+            'limit': 3,
+            'offset': 10
+        })
+
+        print "requParams", requestParams
+
+        params = {
+            'll': lat + ',' + lng,
+        }
+        params.update(requestParams);
+
+        category = fromRequest(request, 'category', False)
+        if category:
+            if category in CATEGORIES.keys():
+                params['categoryId'] = ''.join(CATEGORIES[category])
+            else:
+                raise ValueError('Provided category not found', category)
+        else:
+            params['categoryId'] = join_all_categories()
+        print "PARAMS", params
+
+        # venues = venues_search_geolocation(lat, lng, category)
+
+        fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
+
+
+        results = fs.venues.explore(params=params)
+
+        # TODO get this rate call working
+        # print "RATE REMAINING", fs.rate_remaining()
+
+        # print "fs.venues.explore, results[groups] len", len(results['groups'])
+        # print results['groups'][0]['items']
+
+        # TODO check what other groups this returns?!
+        # print "ITEMS", results['groups'][0]['items']
+        venues = results['groups'][0]['items']
+
         venues_in_category = []
         i = f = 0
         max = min(int(limit), (len(venues) - 1))
@@ -249,13 +286,7 @@ def get_venues(lat, lng, category=None):
 def location_media(id):
     print str(datetime.now())
     try:
-        if 'access_token' in request.query.keys():
-            access_token = request.query['access_token']
-            if not access_token:
-                raise Exception('Invalid access_token')
-        else:
-            raise Exception('Missing access_token')
-
+        access_token = fromRequest(request, 'access_token', False)
         venue = venue_info(id)
         collection = venues_images(access_token, id, "popular")
         result = {'venue': venue['venue'], 'images': collection, 'fq_api_calls_remaining': venue['api_calls_remaining']}
@@ -271,7 +302,7 @@ def location_media(id):
 def image_comments(id):
     print str(datetime.now())
     try:
-        access_token = tokenFromRequest(request)
+        access_token = fromRequest(request, 'access_token', False)
         result = instagram_comments(access_token, id)
         return json.dumps(result)
     except Exception as e:
@@ -286,7 +317,7 @@ def image_comments(id):
 def trendsetters(lat, lng):
     print str(datetime.now())
     try:
-        access_token = tokenFromRequest(request)
+        access_token = fromRequest(request, 'access_token', False)
         api = client.InstagramAPI(access_token=access_token)
         # TODO get limit from query param
         result = api.media_popular(count=2)
@@ -315,7 +346,7 @@ def trendsetters(lat, lng):
 @route('/api/user/network/feed')
 def network_summary():
     try:
-        access_token = tokenFromRequest(request)
+        access_token = fromRequest(request, 'access_token', False)
         api = client.InstagramAPI(access_token=access_token)
         # TODO count from query param
         media = api.user_media_feed(count=4)
@@ -362,12 +393,11 @@ def network_summary():
         return "api/user/network/feed returned error"
 
 
-
 # just a test route to see how much photos have venue info
 # TODO WIP
 @route('/api/popular')
 def popular():
-    access_token = tokenFromRequest(request)
+    access_token = fromRequest(request, 'access_token', False)
     api = client.InstagramAPI(access_token=access_token)
     # TODO count from query param
     # media = api.user_media_feed(count=4)
@@ -400,7 +430,8 @@ def popular():
                     print medium.location.id
                     print medium.location.name
 
-                    fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
+                    fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID,
+                                               client_secret=config.FOURSQURE_CLIENT_SECRET)
                     params = {
                         'query': medium.location.name,
                         'll': str(medium.location.point.latitude) + "," + str(medium.location.point.longitude)
@@ -454,7 +485,7 @@ R_OLD, G_OLD, B_OLD = (255, 255, 255)
 R_NEW, G_NEW, B_NEW = (0, 174, 239)
 
 
-#https://ss3.4sqi.net/img/categories_v2/food/mediterranean_32.png
+# https://ss3.4sqi.net/img/categories_v2/food/mediterranean_32.png
 @app.route('/file/icon/<color>/<filename:path>')
 def serve_img(color, filename):
     f = urllib.unquote_plus(filename)
