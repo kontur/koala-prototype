@@ -20,6 +20,9 @@ unauthenticated_api = client.InstagramAPI(**config.INSTAGRAM)
 # ########
 
 
+# join all foursquare venue categories we use together as comma-separated string
+# this is the default "category" request value for any calls that are not
+# category specific; this ensures result are from the categories we are interested
 def join_all_categories():
     str = ""
     for key, value in CATEGORIES.iteritems():
@@ -27,17 +30,9 @@ def join_all_categories():
     return str
 
 
-
-
-def limitFromRequest(request, default=3):
-    if 'limit' in request.query.keys():
-        return request.query['limit']
-    else:
-        return default
-
+# get a single parameter from @request object query params, and use @default if its not found
+# and @default is provided
 def fromRequest(request, param, default):
-    print "fromRequest", param
-
     if param in request.query.keys():
         return request.query[param]
     else:
@@ -46,13 +41,14 @@ def fromRequest(request, param, default):
         else:
             return False
 
+
+# get a dict of values from @request object query params where @object keys are fields to look for,
+# and @object values are default values for those keys, should they not be present in @request
 def fromRequestObj(request, object):
+    print object
     defaulted = {}
     for key in object.keys():
-        print "fromReqObj", key, object[key]
         defaulted[key] = fromRequest(request, key, object[key])
-
-    print "defaulted", defaulted
     return defaulted
 
 
@@ -101,11 +97,12 @@ def venues_search_geolocation(lat, lng, category=None):
     return results['groups'][0]['items']
 
 
-def venues_images(access_token, foursquare_venue_id, sort_by=None):
+def venues_images(access_token, foursquare_venue_id, limit=1, sort_by=None):
     collection = []
     api = client.InstagramAPI(access_token=access_token)
     location = api.location_search(foursquare_v2_id=foursquare_venue_id)
     if len(location) > 0:
+        # TODO is there a limit param for this call?
         media = api.location_recent_media(location_id=location[0].id)
     else:
         return
@@ -136,7 +133,7 @@ def venues_images(access_token, foursquare_venue_id, sort_by=None):
     if sort_by and sort_by is "popular":
         collection = sorted(collection, key=lambda k: k['likes'])
         collection.reverse()
-    return collection
+    return collection[0:limit]
 
 
 def venue_info(foursquare_venue_id):
@@ -209,31 +206,36 @@ def find_venues(term, category=None):
 
 
 # Retrieves a list of venues based on a geolocation
-# @route('/api/venues/show/<lat>/<lng>', defaults={'category': None})
+# Pass in additional query params:
+# * access_token (ig)
+# * limit - default 1
+# * images (int) - default 0
+# * comments (int) - default 0
 @route('/api/venues/show/<lat>/<lng>')
 def api_venues_show(lat, lng):
     print str(datetime.now()), "lat:", lat, "lng:", lng
-
-    for key in request.query.decode():
-        print "request param", key, request.query[key]
+    fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
 
     try:
         access_token = fromRequest(request, 'access_token', False)
-        limit = fromRequest(request, 'limit', 3)
 
+        # up to how many images per venue to include in the response
+        # note: this could return less images for the venue, if there isn't that many
+        num_images = int(fromRequest(request, 'images', 0))
 
-        requestParams = fromRequestObj(request, {
-            'limit': 3,
-            'offset': 10
+        # how many venues to find
+        num = int(fromRequest(request, 'limit', 1))
+
+        venues_per_request = num
+
+        # construct fs query params
+        params = fromRequestObj(request, {
+            'limit': venues_per_request,
+            'offset': "0",
+            'll': lat + ',' + lng
         })
 
-        print "requParams", requestParams
-
-        params = {
-            'll': lat + ',' + lng,
-        }
-        params.update(requestParams);
-
+        # if there was an explicit category to pick venues from, use that, otherwise, use our defaults
         category = fromRequest(request, 'category', False)
         if category:
             if category in CATEGORIES.keys():
@@ -242,40 +244,40 @@ def api_venues_show(lat, lng):
                 raise ValueError('Provided category not found', category)
         else:
             params['categoryId'] = join_all_categories()
-        print "PARAMS", params
-
-        # venues = venues_search_geolocation(lat, lng, category)
-
-        fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
 
 
-        results = fs.venues.explore(params=params)
+        # we want only venues that also have ig photos, so loop until we found enough
+        # (in most cases this means only one loop / fs api call as most venues have images)
+        found = 0
+        i = 0
+        while found < num:
+            print "fs.venues.explore with ", params
+            results = fs.venues.explore(params=params)
+            print "remains", fs.rate_remaining
 
-        # TODO get this rate call working
-        # print "RATE REMAINING", fs.rate_remaining()
+            # TODO check what other groups this returns?!
+            # print "ITEMS", results['groups'][0]['items']
+            venues = results['groups'][0]['items']
 
-        # print "fs.venues.explore, results[groups] len", len(results['groups'])
-        # print results['groups'][0]['items']
+            if venues and num_images > 0:
+                for index, venue in enumerate(venues):
+                    print "venue", json.dumps(venue['venue']['id'])
+                    images = venues_images(access_token, venue['venue']['id'], num_images, "popular")
+                    if images and len(images) > 0:
+                        print len(images)
+                        venues[index]['instagram'] = images
+                        print "note: ", len(venues[index]['instagram']), " images found for venue"
+                    else:
+                        print "note: no images for venue"
+            else:
+                break
 
-        # TODO check what other groups this returns?!
-        # print "ITEMS", results['groups'][0]['items']
-        venues = results['groups'][0]['items']
-
-        venues_in_category = []
-        i = f = 0
-        max = min(int(limit), (len(venues) - 1))
-        if venues:
-            while (f < max):
-                collection = venues_images(access_token, venues[i]['venue']['id'], "popular")
-                if collection and len(collection) > 0:
-                    f = f + 1
-                    venues[i]['instagram'] = collection[0]
-                    venues[i]['instagram_stats'] = {'num_photos': len(collection)}
-                venues_in_category.append(venues[i])
-                i = i + 1
+            found = found + 3
+            i = i + 1
+            params['offset'] = str(int(params['offset']) + venues_per_request * i)
 
         print str(datetime.now())
-        return json.dumps(venues_in_category)
+        return json.dumps(venues)
     except Exception as e:
         print str(datetime.now())
         print e
