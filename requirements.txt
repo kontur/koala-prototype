@@ -4,6 +4,7 @@ bottle==0.12.7
 foursquare==2014.04.23a
 gunicorn==19.1.1
 httplib2==0.9
+humanize==0.5.1
 jsonpickle==0.8.0
 poster==0.8.1
 python-instagram==1.1.3
