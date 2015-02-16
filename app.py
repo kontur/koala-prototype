@@ -7,6 +7,7 @@ import config
 import time
 from datetime import datetime
 from urlparse import urlparse
+import humanize
 
 bottle.debug(True)
 
@@ -98,7 +99,10 @@ def venues_search_geolocation(lat, lng, category=None):
     return results['groups'][0]['items']
 
 
-def venues_images(access_token, foursquare_venue_id, limit=1, sort_by=None):
+# TODO this should include subcall to retrieve comments included in response
+# NOTE that this always retrieves all images from instagram, as their api doesnt
+# have a limit param for this endpoint
+def venues_images(access_token, foursquare_venue_id, limit=None, sort_by=None):
     collection = []
     api = client.InstagramAPI(access_token=access_token)
     location = api.location_search(foursquare_v2_id=foursquare_venue_id)
@@ -125,7 +129,8 @@ def venues_images(access_token, foursquare_venue_id, limit=1, sort_by=None):
                             'api_calls_remaining': api.x_ratelimit_remaining,
                             'user': medium.user.username,
                             'user_profile': medium.user.profile_picture,
-                            'created_time': time.asctime(medium.created_time.timetuple())
+                            'created_time': time.asctime(medium.created_time.timetuple()),
+                            'time_ago': humanize.naturaltime(datetime.now() - medium.created_time)
                         }
                         collection.append(dict)
     except Exception as e:
@@ -134,6 +139,10 @@ def venues_images(access_token, foursquare_venue_id, limit=1, sort_by=None):
     if sort_by and sort_by is 'popular':
         collection = sorted(collection, key=lambda k: k['likes'])
         collection.reverse()
+
+    if not limit:
+        limit = len(collection)
+
     return collection[0:limit]
 
 
@@ -177,33 +186,30 @@ def instagram_comments(access_token, instagram_id):
 # API ROUTES
 # ###########
 
-@route('/api/venues/search/<term>', defaults={'category': None})
-@route('/api/venues/search/<term>/<category>')
-def find_venues(term, category=None):
-    print str(datetime.now()), 'term:', term, 'category:', category
-
-    access_token = fromRequest(request, 'access_token', False)
-    limit = limitFromRequest(request, 3)
-
-    venues = venues_search_place(term, category)
-    venues_in_category = []
-    i = f = 0
-    max = min(int(limit), len(venues) - 1)
-    if venues:
-        while (f < max):
-            collection = venues_images(venues[i]['venue']['id'], 'popular')
-            if len(collection) > 0:
-                f = f + 1
-                venues[i]['instagram'] = collection[0]
-                venues[i]['instagram_stats'] = {'num_photos': len(collection)}
-            venues_in_category.append(venues[i])
-            i = i + 1
-
-    print str(datetime.now())
-    return json.dumps(venues_in_category)
-
-
-
+# @route('/api/venues/search/<term>', defaults={'category': None})
+# @route('/api/venues/search/<term>/<category>')
+# def find_venues(term, category=None):
+#     print str(datetime.now()), 'term:', term, 'category:', category
+#
+#     access_token = fromRequest(request, 'access_token', False)
+#     limit = limitFromRequest(request, 3)
+#
+#     venues = venues_search_place(term, category)
+#     venues_in_category = []
+#     i = f = 0
+#     max = min(int(limit), len(venues) - 1)
+#     if venues:
+#         while (f < max):
+#             collection = venues_images(venues[i]['venue']['id'], 'popular')
+#             if len(collection) > 0:
+#                 f = f + 1
+#                 venues[i]['instagram'] = collection[0]
+#                 venues[i]['instagram_stats'] = {'num_photos': len(collection)}
+#             venues_in_category.append(venues[i])
+#             i = i + 1
+#
+#     print str(datetime.now())
+#     return json.dumps(venues_in_category)
 
 
 # Retrieves a list of venues based on a geolocation
@@ -211,7 +217,7 @@ def find_venues(term, category=None):
 # * access_token (ig)
 # * limit - default 1
 # * images (int) - default 0
-# * comments (int) - default 0
+# * comments (int) - default 0 NOTE instagram itself does not allow limiting the number of retrieved comments
 @route('/api/venues/show/<lat>/<lng>')
 def api_venues_show(lat, lng):
     print str(datetime.now()), 'lat:', lat, 'lng:', lng
@@ -271,6 +277,7 @@ def api_venues_show(lat, lng):
                     if images and len(images) > 0:
                         venues[index]['instagram'] = images
 
+                        # TODO make this comments subrequest part of venues_images()
                         # if the response is to include comments on those images
                         # note: there is no limit applied to the number of comments
                         if num_image_comments > 0:
@@ -287,23 +294,29 @@ def api_venues_show(lat, lng):
 
         return json.dumps(venues)
     except Exception as e:
-        return 'api/venues/show returned error'
+        return 'api_venues_show returned error'
 
 
 @route('/api/venue/<id>')
-def location_media(id):
-    print str(datetime.now())
+def api_venue_info(id):
+    print "api venue", str(datetime.now())
     try:
         access_token = fromRequest(request, 'access_token', False)
         venue = venue_info(id)
-        collection = venues_images(access_token, id, 'popular')
-        result = {'venue': venue['venue'], 'images': collection, 'fq_api_calls_remaining': venue['api_calls_remaining']}
-        print str(datetime.now())
+        result = {'venue': venue['venue'], 'fq_api_calls_remaining': venue['api_calls_remaining']}
         return json.dumps(result)
     except Exception as e:
-        print str(datetime.now())
-        print e
-        return 'api/venue/id returned error'
+        return 'api_venue_info returned error'
+
+
+@route('/api/venue/<id>/images')
+def api_venue_images(id):
+    try:
+        access_token = fromRequest(request, 'access_token', False)
+        images = venues_images(access_token, id, 3)
+        return json.dumps(images)
+    except Exception as e:
+        return 'api_venue_images returned error'
 
 
 @route('/api/image_comments/<id>')
@@ -314,8 +327,6 @@ def image_comments(id):
         result = instagram_comments(access_token, id)
         return json.dumps(result)
     except Exception as e:
-        print str(datetime.now())
-        print e
         return 'api/image_comments/id returned error'
 
 
