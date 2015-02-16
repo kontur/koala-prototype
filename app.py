@@ -21,10 +21,10 @@ unauthenticated_api = client.InstagramAPI(**config.INSTAGRAM)
 
 
 # join all foursquare venue categories we use together as comma-separated string
-# this is the default "category" request value for any calls that are not
+# this is the default 'category' request value for any calls that are not
 # category specific; this ensures result are from the categories we are interested
 def join_all_categories():
-    str = ""
+    str = ''
     for key, value in CATEGORIES.iteritems():
         str += ''.join(value) + ','
     return str
@@ -50,6 +50,7 @@ def fromRequestObj(request, object):
     for key in object.keys():
         defaulted[key] = fromRequest(request, key, object[key])
     return defaulted
+
 
 
 def venues_get_id(id):
@@ -88,9 +89,9 @@ def venues_search_geolocation(lat, lng, category=None):
     # print results['groups']
 
     # TODO get this rate call working
-    # print "RATE REMAINING", fs.rate_remaining()
+    # print 'RATE REMAINING', fs.rate_remaining()
 
-    print "fs.venues.explore, results[groups] len", len(results['groups'])
+    print 'fs.venues.explore, results[groups] len', len(results['groups'])
     # print results['groups'][0]['items']
 
     # TODO check what other groups this returns?!
@@ -114,7 +115,7 @@ def venues_images(access_token, foursquare_venue_id, limit=1, sort_by=None):
                     # TODO WTF is going on here, why would there by some strings spread over an array in this lst?
                     # print type(medium)
                     if (medium and type(medium) is models.Media):
-                        # print "medium", medium
+                        # print 'medium', medium
                         dict = {
                             'instagram_id': medium.id,
                             'type': medium.type,
@@ -130,7 +131,7 @@ def venues_images(access_token, foursquare_venue_id, limit=1, sort_by=None):
     except Exception as e:
         print(e)
 
-    if sort_by and sort_by is "popular":
+    if sort_by and sort_by is 'popular':
         collection = sorted(collection, key=lambda k: k['likes'])
         collection.reverse()
     return collection[0:limit]
@@ -140,7 +141,7 @@ def venue_info(foursquare_venue_id):
     try:
         fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
         result = fs.venues(foursquare_venue_id)
-        print "FS API calls remaingin", fs.rate_remaining
+        print 'FS API calls remaingin', fs.rate_remaining
         result['api_calls_remaining'] = fs.rate_remaining
         return result
     except Exception as e:
@@ -168,7 +169,7 @@ def instagram_comments(access_token, instagram_id):
         else:
             return False
     except Exception as e:
-        print "excep", e
+        print 'excep', e
         return False
 
 
@@ -179,7 +180,7 @@ def instagram_comments(access_token, instagram_id):
 @route('/api/venues/search/<term>', defaults={'category': None})
 @route('/api/venues/search/<term>/<category>')
 def find_venues(term, category=None):
-    print str(datetime.now()), "term:", term, "category:", category
+    print str(datetime.now()), 'term:', term, 'category:', category
 
     access_token = fromRequest(request, 'access_token', False)
     limit = limitFromRequest(request, 3)
@@ -190,7 +191,7 @@ def find_venues(term, category=None):
     max = min(int(limit), len(venues) - 1)
     if venues:
         while (f < max):
-            collection = venues_images(venues[i]['venue']['id'], "popular")
+            collection = venues_images(venues[i]['venue']['id'], 'popular')
             if len(collection) > 0:
                 f = f + 1
                 venues[i]['instagram'] = collection[0]
@@ -213,11 +214,14 @@ def find_venues(term, category=None):
 # * comments (int) - default 0
 @route('/api/venues/show/<lat>/<lng>')
 def api_venues_show(lat, lng):
-    print str(datetime.now()), "lat:", lat, "lng:", lng
+    print str(datetime.now()), 'lat:', lat, 'lng:', lng
     fs = foursquare.Foursquare(client_id=config.FOURSQURE_CLIENT_ID, client_secret=config.FOURSQURE_CLIENT_SECRET)
 
     try:
         access_token = fromRequest(request, 'access_token', False)
+
+        # up to how many comments per image to include, if there is any
+        num_image_comments = int(fromRequest(request, 'comments', 0))
 
         # up to how many images per venue to include in the response
         # note: this could return less images for the venue, if there isn't that many
@@ -231,7 +235,7 @@ def api_venues_show(lat, lng):
         # construct fs query params
         params = fromRequestObj(request, {
             'limit': venues_per_request,
-            'offset': "0",
+            'offset': '0',
             'll': lat + ',' + lng
         })
 
@@ -251,24 +255,29 @@ def api_venues_show(lat, lng):
         found = 0
         i = 0
         while found < num:
-            print "fs.venues.explore with ", params
+            print 'fs.venues.explore with ', params
             results = fs.venues.explore(params=params)
-            print "remains", fs.rate_remaining
+            print 'remains', fs.rate_remaining
 
             # TODO check what other groups this returns?!
-            # print "ITEMS", results['groups'][0]['items']
+            # print 'ITEMS', results['groups'][0]['items']
             venues = results['groups'][0]['items']
 
+            # if the response is to include images
             if venues and num_images > 0:
                 for index, venue in enumerate(venues):
-                    print "venue", json.dumps(venue['venue']['id'])
-                    images = venues_images(access_token, venue['venue']['id'], num_images, "popular")
+                    images = venues_images(access_token, venue['venue']['id'], num_images, 'popular')
+
                     if images and len(images) > 0:
-                        print len(images)
                         venues[index]['instagram'] = images
-                        print "note: ", len(venues[index]['instagram']), " images found for venue"
-                    else:
-                        print "note: no images for venue"
+
+                        # if the response is to include comments on those images
+                        # note: there is no limit applied to the number of comments
+                        if num_image_comments > 0:
+                            for i, image in enumerate(images):
+                                if int(image['comments_count']) > 0:
+                                    res = instagram_comments(access_token, image['instagram_id'])
+                                    venues[index]['instagram'][i]['comments'] = res
             else:
                 break
 
@@ -276,12 +285,9 @@ def api_venues_show(lat, lng):
             i = i + 1
             params['offset'] = str(int(params['offset']) + venues_per_request * i)
 
-        print str(datetime.now())
         return json.dumps(venues)
     except Exception as e:
-        print str(datetime.now())
-        print e
-        return "api/venues/show returned error"
+        return 'api/venues/show returned error'
 
 
 @route('/api/venue/<id>')
@@ -290,14 +296,14 @@ def location_media(id):
     try:
         access_token = fromRequest(request, 'access_token', False)
         venue = venue_info(id)
-        collection = venues_images(access_token, id, "popular")
+        collection = venues_images(access_token, id, 'popular')
         result = {'venue': venue['venue'], 'images': collection, 'fq_api_calls_remaining': venue['api_calls_remaining']}
         print str(datetime.now())
         return json.dumps(result)
     except Exception as e:
         print str(datetime.now())
         print e
-        return "api/venue/id returned error"
+        return 'api/venue/id returned error'
 
 
 @route('/api/image_comments/<id>')
@@ -310,7 +316,7 @@ def image_comments(id):
     except Exception as e:
         print str(datetime.now())
         print e
-        return "api/image_comments/id returned error"
+        return 'api/image_comments/id returned error'
 
 
 # TODO fix these are complete SUDO results, just instagram trending people, nothing to do with venue photos
@@ -338,7 +344,7 @@ def trendsetters(lat, lng):
     except Exception as e:
         print str(datetime.now())
         print e
-        return "api/transetters returned error"
+        return 'api/transetters returned error'
 
 
 # TODO checkout proper logging library instead of noobster printing times etc...
@@ -364,14 +370,14 @@ def network_summary():
                         # TODO WTF is going on here, why would there by some strings spread over an array in this lst?
                         # print type(medium)
                         if (medium and type(medium) is models.Media):
-                            print "MEDIUM", medium
+                            print 'MEDIUM', medium
 
                             print dir(medium)
 
                             # if medium.location:
-                            # print "LOCATION", medium.location
+                            # print 'LOCATION', medium.location
                             # else:
-                            # print "LOCATION none"
+                            # print 'LOCATION none'
                             dict = {
                                 'instagram_id': medium.id,
                                 'type': medium.type,
@@ -392,7 +398,7 @@ def network_summary():
         return json.dumps(collection)
     except Exception as e:
         print e
-        return "api/user/network/feed returned error"
+        return 'api/user/network/feed returned error'
 
 
 # just a test route to see how much photos have venue info
@@ -417,14 +423,14 @@ def popular():
     try:
         for medium in media:
             if medium:
-                # print "lst", lst
+                # print 'lst', lst
                 # for medium in lst:
                 # TODO WTF is going on here, why would there by some strings spread over an array in this lst?
                 print type(medium)
                 print medium.id, medium.type
 
-                if hasattr(medium, "location"):
-                    print "LOCATION", medium.location
+                if hasattr(medium, 'location'):
+                    print 'LOCATION', medium.location
                     withlocation += 1
 
                     print medium.location.point.latitude
@@ -436,12 +442,12 @@ def popular():
                                                client_secret=config.FOURSQURE_CLIENT_SECRET)
                     params = {
                         'query': medium.location.name,
-                        'll': str(medium.location.point.latitude) + "," + str(medium.location.point.longitude)
+                        'll': str(medium.location.point.latitude) + ',' + str(medium.location.point.longitude)
                     }
 
                     results = fs.venues.search(params=params)
 
-                    print "RESULTS", results
+                    print 'RESULTS', results
 
 
                     # location = venues_get_id(medium.location.id)
@@ -452,12 +458,12 @@ def popular():
                     collection.append(dict)
 
                 else:
-                    print "NO LOCATION"
+                    print 'NO LOCATION'
                     withoutlocation += 1
 
 
                     # if (medium and type(medium) is models.Media):
-                    # print "MEDIUM", medium
+                    # print 'MEDIUM', medium
                     # dict = {
                     # 'instagram_id': medium.id,
                     # 'type': medium.type,
@@ -494,7 +500,7 @@ def serve_img(color, filename):
     name = f.rsplit('/', 1)
 
     # TODO check that those color values are valid rgb values; default to something
-    cols = color.split(",")
+    cols = color.split(',')
 
     file = cStringIO.StringIO(urllib.urlopen(f).read())
     im = Image.open(file)
@@ -508,6 +514,6 @@ def serve_img(color, filename):
                 pixels[x, y] = (int(cols[0]), int(cols[1]), int(cols[2]), a)
 
     # TODO save icon per color in name
-    im.save("icons/" + name[1])
+    im.save('icons/' + name[1])
     return static_file(name[1], root='icons', mimetype='image/png')
 
